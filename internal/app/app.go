@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
+	"nilchan-hackaton/internal/domain/pparser"
 	"nilchan-hackaton/internal/shared/middlewares"
 	"nilchan-hackaton/internal/storage"
 
@@ -36,7 +37,16 @@ func New(cfg *config.Config) (*App, error) {
 		storage: storage,
 	}
 
-	a.registerRouter()
+	firecrawlClient, err := pparser.NewFirecrawlClient(
+		cfg.Firecrawl.APIKey,
+		cfg.Firecrawl.BaseURL,
+		&http.Client{Timeout: cfg.Firecrawl.Timeout},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	a.registerRouter(firecrawlClient)
 
 	return a, nil
 }
@@ -55,11 +65,13 @@ func (a *App) Run() {
 	}
 }
 
-func (a *App) registerRouter() {
-
+func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
 	authRepo := auth.NewAuthRepository(a.storage)
 	authService := auth.NewAuthService(authRepo)
 	authHandler := auth.NewHandler(authService)
+
+	parserService := pparser.NewParserService(fcClient)
+	_ = parserService
 
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)

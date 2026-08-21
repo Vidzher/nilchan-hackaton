@@ -14,6 +14,13 @@ type Config struct {
 	Env         string     `yaml:"env" env-default:"local"`
 	StoragePath string     `yaml:"storage_path" env-required:"true"`
 	HTTPServer  HTTPServer `yaml:"http_server" env-required:"true"`
+	Firecrawl   Firecrawl  `yaml:"firecrawl"`
+}
+
+type Firecrawl struct {
+	APIKey  string        `yaml:"api_key" env:"FIRECRAWL_KEY"`
+	BaseURL string        `yaml:"base_url" env-default:"https://api.firecrawl.dev/v2/scrape"`
+	Timeout time.Duration `yaml:"timeout" env-default:"30s"`
 }
 
 type HTTPServer struct {

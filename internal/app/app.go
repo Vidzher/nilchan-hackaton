@@ -3,8 +3,8 @@ package app
 import (
 	"log"
 	"net/http"
-	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
+	"nilchan-hackaton/internal/domain/auth"
 	"nilchan-hackaton/internal/domain/pparser"
 	"nilchan-hackaton/internal/shared/middlewares"
 	"nilchan-hackaton/internal/storage"

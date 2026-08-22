@@ -148,12 +148,12 @@ Frontend опрашивает `GET /api/resources/:id`. Пока Resource нах
 
 Для `(userId, url)` действует database unique constraint. В `url` хранится нормализованный URL. Повторный `POST /api/resources` обрабатывается так:
 
-| Текущий статус | Поведение |
-| -------------- | --------- |
-| `PROCESSING` | вернуть существующий Resource с `202`, новую goroutine не запускать |
-| `NOT_COMPLETED` | вернуть duplicate error |
-| `COMPLETED` | вернуть duplicate error |
-| `FAILED` | повторно проверить capacity и при необходимости заново купить overflow slot, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
+| Текущий статус  | Поведение                                                                                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROCESSING`    | вернуть существующий Resource с `202`, новую goroutine не запускать                                                                                                                         |
+| `NOT_COMPLETED` | вернуть duplicate error                                                                                                                                                                     |
+| `COMPLETED`     | вернуть duplicate error                                                                                                                                                                     |
+| `FAILED`        | повторно проверить capacity и при необходимости заново купить overflow slot, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
 
 Одновременные retry используют условный переход `FAILED → PROCESSING`, поэтому обработку сможет запустить только один запрос.
 
@@ -246,6 +246,100 @@ Backend отклоняет весь сгенерированный quiz, есл�
 Не использовать вопросы про название статьи, автора или механическое запоминание формулировок.
 
 Источник считается **untrusted content**. LLM не должна выполнять инструкции, найденные внутри страницы, и должна использовать только информацию из SOURCE.
+
+LLM возвращает только объект с массивом `questions`. `Quiz.id`, `Quiz.title`, `verificationSalt` и `correctAnswerHash` не генерируются LLM: title копируется из сохранённого Resource, остальные значения создаются backend после валидации ответа.
+
+OpenRouter вызывается со следующим structured output contract:
+
+```json
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "quiz_generation",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["questions"],
+      "properties": {
+        "questions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "options",
+              "correctIndex",
+              "explanation",
+              "evidence"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Question testing understanding of the source material"
+              },
+              "options": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Exactly four unique answer options"
+              },
+              "correctIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3,
+                "description": "Zero-based index of the only correct option"
+              },
+              "explanation": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Short explanation of why the answer is correct"
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact excerpt from SOURCE supporting the correct answer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Сокращённый фрагмент ответа LLM; полный ответ обязан содержать 5–10 вопросов:
+
+```json
+{
+  "questions": [
+    {
+      "text": "Why are goroutines considered lightweight compared with operating-system threads?",
+      "options": [
+        "They use dynamically growing stacks managed by the Go runtime",
+        "They always execute without operating-system threads",
+        "They cannot perform blocking operations",
+        "They share a single fixed-size stack"
+      ],
+      "correctIndex": 0,
+      "explanation": "Goroutine stacks start small and grow when necessary, reducing their initial memory cost.",
+      "evidence": "Goroutines have dynamically growing stacks that begin with a small amount of memory."
+    }
+  ]
+}
+```
+
+JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов, диапазон `correctIndex`, а также точное присутствие нормализованного `evidence` в сохранённом `Resource.content`. Любое нарушение отклоняет весь quiz и считается quiz validation error.
 
 ---
 
@@ -765,15 +859,15 @@ API errors используют HTTP status и человекочитаемое 
 
 Основные HTTP statuses:
 
-| HTTP | Когда |
-| ---: | ----- |
-| 400 | невалидный request или URL |
-| 401 | отсутствует или невалиден JWT, либо неверны credentials |
-| 404 | entity не существует или принадлежит другому user |
-| 409 | конфликт состояния, duplicate email/username/resource, заполненный backlog или недостаточно е-баллов |
-| 422 | request валиден, но content или answers не могут быть приняты |
-| 502 | Firecrawl завершился ошибкой |
-| 504 | общий Firecrawl timeout исчерпан |
+| HTTP | Когда                                                                                                |
+| ---: | ---------------------------------------------------------------------------------------------------- |
+|  400 | невалидный request или URL                                                                           |
+|  401 | отсутствует или невалиден JWT, либо неверны credentials                                              |
+|  404 | entity не существует или принадлежит другому user                                                    |
+|  409 | конфликт состояния, duplicate email/username/resource, заполненный backlog или недостаточно е-баллов |
+|  422 | request валиден, но content или answers не могут быть приняты                                        |
+|  502 | Firecrawl завершился ошибкой                                                                         |
+|  504 | общий Firecrawl timeout исчерпан                                                                     |
 
 Auth middleware для отсутствующего или невалидного JWT возвращает plain-text сообщение с HTTP `401`; login/register handlers используют JSON envelope выше.
 

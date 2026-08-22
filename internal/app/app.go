@@ -1,7 +1,9 @@
 package app
 
 import (
-	"log"
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/domain/auth"
@@ -20,9 +22,9 @@ type App struct {
 }
 
 func New(cfg *config.Config) (*App, error) {
-	storage, err := storage.NewStorage(cfg.StoragePath)
+	store, err := storage.NewStorage(cfg.StoragePath)
 	if err != nil {
-		log.Fatalf("storage init error: %v", err.Error())
+		return nil, fmt.Errorf("initialize storage: %w", err)
 	}
 
 	router := chi.NewRouter()
@@ -34,7 +36,7 @@ func New(cfg *config.Config) (*App, error) {
 	a := &App{
 		cfg:     cfg,
 		router:  router,
-		storage: storage,
+		storage: store,
 	}
 
 	firecrawlClient, err := pparser.NewFirecrawlClient(
@@ -43,6 +45,7 @@ func New(cfg *config.Config) (*App, error) {
 		&http.Client{Timeout: cfg.Firecrawl.Timeout},
 	)
 	if err != nil {
+		store.Close()
 		return nil, err
 	}
 
@@ -51,7 +54,7 @@ func New(cfg *config.Config) (*App, error) {
 	return a, nil
 }
 
-func (a *App) Run() {
+func (a *App) Run(ctx context.Context) error {
 	srv := http.Server{
 		Addr:         a.cfg.HTTPServer.Address,
 		Handler:      a.router,
@@ -60,9 +63,35 @@ func (a *App) Run() {
 		IdleTimeout:  a.cfg.HTTPServer.IdleTimeout,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal("failed to start server")
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErrors:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("serve HTTP: %w", err)
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTPServer.ShutdownTimeout)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("shut down HTTP server: %w", err)
+		}
+
+		err := <-serverErrors
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("serve HTTP: %w", err)
+		}
+		return nil
 	}
+}
+
+func (a *App) Close() error {
+	return a.storage.Close()
 }
 
 func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {

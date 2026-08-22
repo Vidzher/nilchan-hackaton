@@ -4,11 +4,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"nilchan-hackaton/internal/lib/api/request"
 	"nilchan-hackaton/internal/lib/api/response"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type Service interface {
@@ -20,16 +20,15 @@ type Handler struct {
 	service Service
 }
 
-var validate = validator.New()
-
 func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
 func (h *Handler) HandleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := decodeAndValidate[LoginRequestDTO](w, r)
-		if !ok {
+		req, err := request.DecodeAndValidate[LoginRequestDTO](r)
+		if err != nil {
+			renderRequestError(w, r, err)
 			return
 		}
 
@@ -51,8 +50,9 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 
 func (h *Handler) HandleRegister() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := decodeAndValidate[RegisterRequestDTO](w, r)
-		if !ok {
+		req, err := request.DecodeAndValidate[RegisterRequestDTO](r)
+		if err != nil {
+			renderRequestError(w, r, err)
 			return
 		}
 
@@ -74,18 +74,12 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 	}
 }
 
-func decodeAndValidate[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
-	var request T
-	if err := render.DecodeJSON(r.Body, &request); err != nil {
-		renderError(w, r, http.StatusBadRequest, "invalid request body")
-		return nil, false
+func renderRequestError(w http.ResponseWriter, r *http.Request, err error) {
+	message := request.ErrValidation.Error()
+	if errors.Is(err, request.ErrInvalidBody) {
+		message = request.ErrInvalidBody.Error()
 	}
-	if err := validate.Struct(request); err != nil {
-		renderError(w, r, http.StatusBadRequest, "invalid request")
-		return nil, false
-	}
-
-	return &request, true
+	renderError(w, r, http.StatusBadRequest, message)
 }
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *AuthResult) {

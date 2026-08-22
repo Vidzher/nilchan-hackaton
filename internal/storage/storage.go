@@ -2,38 +2,53 @@ package storage
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+//go:embed schema.sql
+var schemaSQL string
 
 type Storage struct {
 	DB *sql.DB
 }
 
 func NewStorage(storagePath string) (*Storage, error) {
-	db, err := sql.Open("sqlite3", storagePath)
+	db, err := sql.Open("sqlite3", sqliteDSN(storagePath))
 	if err != nil {
-		return nil, fmt.Errorf("%s", err.Error())
+		return nil, fmt.Errorf("open storage: %w", err)
 	}
 
-	stmt, err := db.Prepare(`
-		CREATE TABLE IF NOT EXISTS users(
-			id INTEGER PRIMARY KEY,
-			email VARCHAR(255) NOT NULL UNIQUE,
-			password VARCHAR(255) NOT NULL,
-			balance INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE INDEX IF NOT EXISTS idx_email on users(email)
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create table: %s", err.Error())
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("connect to storage: %w", err)
 	}
 
-	_, err = stmt.Exec()
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute statement: %s", err.Error())
+	if _, err := db.Exec(schemaSQL); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
 	return &Storage{DB: db}, nil
+}
+
+func (s *Storage) Close() error {
+	return s.DB.Close()
+}
+
+func sqliteDSN(storagePath string) string {
+	dsn := storagePath
+	if !strings.HasPrefix(dsn, "file:") {
+		dsn = "file:" + dsn
+	}
+
+	separator := "?"
+	if strings.Contains(dsn, "?") {
+		separator = "&"
+	}
+
+	return dsn + separator + "_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000"
 }

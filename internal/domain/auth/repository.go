@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"nilchan-hackaton/internal/shared/models/users"
 	"nilchan-hackaton/internal/storage"
+	"strings"
 
 	"github.com/mattn/go-sqlite3"
 )
@@ -18,41 +19,76 @@ func NewAuthRepository(storage *storage.Storage) *AuthRepository {
 	return &AuthRepository{storage: storage}
 }
 
-func (ar *AuthRepository) Create(email string, password string) error {
-	stmt, err := ar.storage.DB.Prepare("INSERT INTO users(email, password) VALUES(?, ?)")
+func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.User, error) {
+	tx, err := ar.storage.DB.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
+		return nil, fmt.Errorf("begin user creation: %w", err)
 	}
+	defer tx.Rollback()
 
-	defer stmt.Close()
-
-	_, err = stmt.Exec(email, password)
+	var created users.User
+	err = tx.QueryRow(`
+		INSERT INTO users(email, username, password_hash)
+		VALUES(?, ?, ?)
+		RETURNING id, email, username, password_hash, created_at
+	`, email, username, passwordHash).Scan(
+		&created.ID,
+		&created.Email,
+		&created.Username,
+		&created.PasswordHash,
+		&created.CreatedAt,
+	)
 	if err != nil {
-		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			return fmt.Errorf("user exists: %v", email)
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			switch {
+			case strings.Contains(err.Error(), "users.email"):
+				return nil, ErrEmailTaken
+			case strings.Contains(err.Error(), "users.username"):
+				return nil, ErrUsernameTaken
+			}
 		}
-
-		return fmt.Errorf("failed to execute statement: %w", err)
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	return nil
+	if _, err := tx.Exec("INSERT INTO user_progress(user_id) VALUES(?)", created.ID); err != nil {
+		return nil, fmt.Errorf("create user progress: %w", err)
+	}
+
+	if _, err := tx.Exec(
+		"INSERT INTO user_cosmetics(user_id, item_id) VALUES(?, ?), (?, ?)",
+		created.ID,
+		users.DefaultAvatarID,
+		created.ID,
+		users.DefaultFrameID,
+	); err != nil {
+		return nil, fmt.Errorf("grant default cosmetics: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit user creation: %w", err)
+	}
+	return &created, nil
 }
 
 func (ar *AuthRepository) FindOne(email string) (*users.User, error) {
-	stmt, err := ar.storage.DB.Prepare("SELECT * FROM users WHERE email=?")
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare statement: %w", err)
-	}
-
-	defer stmt.Close()
-
 	var found users.User
-	err = stmt.QueryRow(email).Scan(&found.ID, &found.Email, &found.Password, &found.Balance)
+	err := ar.storage.DB.QueryRow(`
+		SELECT id, email, username, password_hash, created_at
+		FROM users
+		WHERE email = ?
+	`, email).Scan(
+		&found.ID,
+		&found.Email,
+		&found.Username,
+		&found.PasswordHash,
+		&found.CreatedAt,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error: %w", err)
+		return nil, fmt.Errorf("find user: %w", err)
 	}
 
 	return &found, nil

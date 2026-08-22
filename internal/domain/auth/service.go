@@ -8,7 +8,7 @@ import (
 )
 
 type Repository interface {
-	Create(email string, password string) error
+	Create(email, username, passwordHash string) (*users.User, error)
 	FindOne(email string) (*users.User, error)
 }
 
@@ -31,8 +31,8 @@ func (as *AuthService) Login(email string, password string) (*AuthResult, error)
 		return nil, err
 	}
 
-	if !pwd.CheckHash(password, res.Password) {
-		return nil, fmt.Errorf("invalid credentials")
+	if !pwd.CheckHash(password, res.PasswordHash) {
+		return nil, ErrInvalidCredentials
 	}
 
 	accessToken, err := token.Generate(res.ID)
@@ -43,12 +43,21 @@ func (as *AuthService) Login(email string, password string) (*AuthResult, error)
 	return &AuthResult{token: accessToken, user: res}, nil
 }
 
-func (as *AuthService) Register(email string, password string) error {
-	pwdHas, err := pwd.Hash(password)
+func (as *AuthService) Register(email, username, password string) (*AuthResult, error) {
+	pwdHash, err := pwd.Hash(password)
 	if err != nil {
-		return fmt.Errorf("failed to hash password: %v", err.Error())
+		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
-	err = as.repo.Create(email, pwdHas)
 
-	return err
+	user, err := as.repo.Create(email, username, pwdHash)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, err := token.Generate(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate accessToken: %w", err)
+	}
+
+	return &AuthResult{token: accessToken, user: user}, nil
 }

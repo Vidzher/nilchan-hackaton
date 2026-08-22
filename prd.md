@@ -14,7 +14,7 @@
 
 Quiz проходится на frontend без запроса к backend после каждого ответа. Вопрос считается закрытым только после правильного ответа. После правильного ответа на все вопросы frontend одним запросом отправляет итоговые ответы на backend. Backend проверяет их, начисляет **XP** и **е-баллы**, помечает материал выполненным и освобождает backlog slot.
 
-XP отвечает за постоянный прогресс и leaderboard. Е-баллы тратятся на оформление профиля и `Overflow Pass`.
+XP отвечает за постоянный прогресс и leaderboard. Е-баллы тратятся на оформление профиля и покупку временного overflow slot при заполненном backlog.
 
 > Не просто сохранять полезный контент, а реально его завершать.
 
@@ -43,7 +43,7 @@ Frontend получает Resource и может открыть оригинал
 ↓
 Backend в goroutine создаёт quiz через LLM
 ↓
-Quiz и Questions сохраняются атомарно
+Quiz вместе с массивом Questions сохраняется атомарно в одном JSON-поле
 ↓
 Resource = NOT_COMPLETED, кнопка quiz становится доступна
 ↓
@@ -104,7 +104,7 @@ Slot занимает Resource со статусом `NOT_COMPLETED` или `PRO
 usedCapacity = notCompletedResources + processingResources
 ```
 
-Если `usedCapacity` достиг Active Backlog Limit, новый Resource добавить нельзя, кроме случая использования `Overflow Pass`. Resource со статусом `FAILED` или `COMPLETED` slot не занимает.
+Если `usedCapacity` достиг Active Backlog Limit, новый Resource добавить нельзя, кроме атомарной покупки одного временного overflow slot вместе с созданием Resource. Resource со статусом `FAILED` или `COMPLETED` slot не занимает.
 
 | Level | Required XP | Active Backlog Limit |
 | ----: | ----------: | -------------------: |
@@ -130,7 +130,7 @@ Backend выполняет:
 4. content validation;
 5. получение title и tags из Firecrawl metadata или локально из content;
 6. повторный duplicate и capacity check в database transaction;
-7. при необходимости списание `Overflow Pass` и создание Resource со статусом `PROCESSING` в той же transaction;
+7. при необходимости списание стоимости временного overflow slot и создание Resource со статусом `PROCESSING` в той же transaction;
 8. запуск goroutine для генерации quiz;
 9. ответ `202 Accepted` с Resource, включая title и tags.
 
@@ -139,21 +139,21 @@ Backend выполняет:
 Goroutine использует собственный timeout, не привязанный к завершившемуся HTTP request, и:
 
 1. создаёт и валидирует quiz через LLM;
-2. в одной transaction сохраняет Quiz и все Questions;
-3. переводит Resource в `NOT_COMPLETED` и впервые устанавливает `activatedAt` в той же transaction.
+2. в одной transaction сохраняет Quiz со всем массивом Questions в `questions_json`;
+3. переводит Resource в `NOT_COMPLETED` в той же transaction.
 
 Frontend опрашивает `GET /api/resources/:id`. Пока Resource находится в `PROCESSING`, frontend уже показывает title, tags и кнопку **Открыть оригинал**, но не позволяет открыть quiz.
 
 ### Duplicate и retry rules
 
-Для `(userId, canonicalUrl)` действует database unique constraint. Повторный `POST /api/resources` обрабатывается так:
+Для `(userId, url)` действует database unique constraint. В `url` хранится нормализованный URL. Повторный `POST /api/resources` обрабатывается так:
 
 | Текущий статус | Поведение |
 | -------------- | --------- |
 | `PROCESSING` | вернуть существующий Resource с `202`, новую goroutine не запускать |
 | `NOT_COMPLETED` | вернуть duplicate error |
 | `COMPLETED` | вернуть duplicate error |
-| `FAILED` | повторно проверить capacity и Overflow Pass, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
+| `FAILED` | повторно проверить capacity и при необходимости заново купить overflow slot, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
 
 Одновременные retry используют условный переход `FAILED → PROCESSING`, поэтому обработку сможет запустить только один запрос.
 
@@ -168,9 +168,9 @@ MAX_LLM_ATTEMPTS = 2
 LLM_ATTEMPT_TIMEOUT = 60s
 ```
 
-После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend хранит безопасный `errorCode`, но не отдаёт frontend сырой ответ провайдера. Если использовался `Overflow Pass`, он возвращается ровно один раз в той же transaction, а `usedOverflowPass` сбрасывается в `false`.
+После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend хранит безопасный `errorCode`, но не отдаёт frontend сырой ответ провайдера. Если для Resource был куплен overflow slot, его стоимость возвращается в е-баллах ровно один раз в той же transaction, а `purchasedOverflowSlot` сбрасывается в `false`.
 
-При старте backend переводит оставшиеся после сбоя `PROCESSING` Resources в `FAILED` через тот же failure transition: slot освобождается, а использованный pass возвращается. Пользователь может повторить только LLM generation обычным `POST /api/resources`.
+При старте backend переводит оставшиеся после сбоя `PROCESSING` Resources в `FAILED` через тот же failure transition: slot освобождается, а стоимость купленного overflow slot возвращается. Пользователь может повторить только LLM generation обычным `POST /api/resources`.
 
 ### URL
 
@@ -194,7 +194,7 @@ MAX_URL_LENGTH = 2048
 - удаляется default port;
 - удаляются `utm_*`, `fbclid`, `gclid`.
 
-Храним `originalUrl` и `canonicalUrl`. Duplicate определяется по `userId + canonicalUrl`.
+Храним один нормализованный `url`. Duplicate определяется по `userId + url`; этот же URL используется для открытия оригинала.
 
 ### Content extraction
 
@@ -241,7 +241,7 @@ MAX_QUESTIONS = 10
 - содержать непустое короткое `explanation`;
 - содержать непустое `evidence`, которое после нормализации whitespace встречается в source content.
 
-Backend отклоняет весь сгенерированный quiz, если вопросов не 5–10, нарушен порядок, есть дубли вопросов, `totalQuestions` не совпадает с фактическим количеством или хотя бы один Question не проходит эти проверки.
+Backend отклоняет весь сгенерированный quiz, если вопросов не 5–10, есть дубли вопросов или хотя бы один Question не проходит эти проверки. Порядок Questions определяется их позицией в JSON-массиве, а `totalQuestions` вычисляется как длина массива и отдельно не хранится.
 
 Не использовать вопросы про название статьи, автора или механическое запоминание формулировок.
 
@@ -253,11 +253,11 @@ Backend отклоняет весь сгенерированный quiz, есл�
 
 Каноническая модель Question определена в разделе 14. Frontend получает все её поля, кроме `correctIndex`.
 
-Для каждого Question backend генерирует случайный `verificationSalt` минимум из 16 random bytes и вычисляет lowercase hex digest от UTF-8 строки:
+Для каждого Question backend генерирует случайный `verificationSalt` минимум из 16 random bytes и вычисляет lowercase hex digest от UTF-8 строки. Question идентифицируется позицией `questionIndex` в JSON-массиве:
 
 ```text
 correctAnswerHash = SHA-256(
-  "v1:" + quizId + ":" + questionId + ":" + correctIndex + ":" + verificationSalt
+  "v1:" + quizId + ":" + questionIndex + ":" + correctIndex + ":" + verificationSalt
 )
 ```
 
@@ -286,8 +286,8 @@ POST /api/quizzes/:quizId/complete
 ```json
 {
   "answers": [
-    { "questionId": "q_1", "selectedIndex": 2 },
-    { "questionId": "q_2", "selectedIndex": 0 }
+    { "questionIndex": 0, "selectedIndex": 2 },
+    { "questionIndex": 1, "selectedIndex": 0 }
   ]
 }
 ```
@@ -295,7 +295,7 @@ POST /api/quizzes/:quizId/complete
 Backend:
 
 1. проверяет ownership Quiz и Resource;
-2. требует ровно один answer для каждого Question без неизвестных или повторяющихся `questionId`;
+2. требует ровно один answer для каждой позиции Question без неизвестных или повторяющихся `questionIndex`;
 3. проверяет `selectedIndex` в диапазоне `0..3`;
 4. сверяет все answers с `correctIndex`;
 5. убеждается, что все ответы правильные;
@@ -342,7 +342,7 @@ Base reward:
 baseEPoints = totalQuestions
 ```
 
-Возраст Resource для rewards считается от `activatedAt` — момента первого перехода в `NOT_COMPLETED`, а не от создания или неудачной генерации quiz. Используется количество полных прошедших 24-часовых периодов.
+Возраст Resource для rewards считается от `createdAt`. Используется количество полных прошедших 24-часовых периодов.
 
 Дополнительно действует **Old Backlog Bounty**:
 
@@ -437,7 +437,7 @@ showcaseItemId?: string
 
 ---
 
-## 11. Е-магазин и Overflow Pass
+## 11. Е-магазин и временный overflow slot
 
 Магазин нужен, чтобы заработок е-баллов имел понятную цель.
 
@@ -460,18 +460,21 @@ showcaseItemId?: string
 | 🌵 Кактус прокрастинации | Showcase |   55 |
 | 🐈 Кот                   | Showcase |  120 |
 | 👑 Golden Duck           | Showcase |  250 |
-| 📦 Overflow Pass         | Utility  |   25 |
 
-Cosmetics покупаются навсегда и могут свободно экипироваться. Purchase выполняется в одной transaction: backend берёт цену из hardcoded catalog, проверяет `ePoints`, списывает е-баллы и добавляет cosmetic или увеличивает `overflowPassCount`. Повторная покупка owned cosmetic возвращает `409 ALREADY_OWNED`; Overflow Pass можно покупать многократно. Equip разрешён только для owned cosmetic соответствующего type.
+Cosmetics покупаются навсегда и могут свободно экипироваться. Purchase выполняется в одной transaction: backend берёт цену из hardcoded catalog, проверяет `ePoints`, списывает е-баллы и добавляет cosmetic. Повторная покупка owned cosmetic возвращает `409 ALREADY_OWNED`. Equip разрешён только для owned cosmetic соответствующего type.
 
-### Overflow Pass
+### Временный overflow slot
 
-`Overflow Pass` позволяет один раз добавить Resource при заполненном Active Backlog.
+Временный overflow slot покупается только вместе с добавлением Resource при заполненном Active Backlog. Отдельно купить или хранить его нельзя.
+
+```text
+OVERFLOW_SLOT_PRICE = 25 е-баллов
+```
 
 ```text
 Used capacity: 5 / 5
 ↓
-Использовать Overflow Pass
+Купить overflow slot за 25 е-баллов и добавить Resource
 ↓
 Used capacity: 6 / 5
 ```
@@ -482,13 +485,13 @@ Used capacity: 6 / 5
 notCompletedResources + processingResources <= activeBacklogLimit + 1
 ```
 
-Если used capacity ниже обычного лимита, `useOverflowPass` игнорируется и pass не списывается. Если capacity равна обычному лимиту, request с `useOverflowPass: false` возвращает `BACKLOG_FULL`, а с `useOverflowPass: true` требует хотя бы один pass и атомарно списывает его при создании Resource.
+Если used capacity ниже обычного лимита, `purchaseOverflowSlot` игнорируется и е-баллы не списываются. Если capacity равна обычному лимиту, request с `purchaseOverflowSlot: false` возвращает `BACKLOG_FULL`, а с `purchaseOverflowSlot: true` требует минимум 25 е-баллов и атомарно списывает их при создании Resource.
 
-Если обработка завершилась с `FAILED`, pass возвращается ровно один раз в transaction перевода Resource в `FAILED`.
+Если обработка завершилась с `FAILED`, 25 е-баллов возвращаются ровно один раз в transaction перевода Resource в `FAILED`.
 
-Нельзя использовать второй pass, пока used capacity уже находится выше обычного лимита. После возвращения к обычному лимиту следующий pass снова можно использовать.
+Нельзя купить второй overflow slot, пока used capacity уже находится выше обычного лимита. После возвращения к обычному лимиту следующий slot снова можно купить.
 
-Других utility items в MVP нет.
+Utility items в Shop в MVP нет.
 
 ---
 
@@ -538,7 +541,6 @@ Leaderboard не выдаёт дополнительных rewards.
 ### Resource
 
 - title;
-- domain;
 - tags;
 - processing/error state;
 - количество вопросов;
@@ -596,7 +598,7 @@ All-time Top 20 по XP.
 
 ```ts
 type User = {
-  id: string;
+  id: number;
   email: string;
   username: string;
   passwordHash: string;
@@ -604,21 +606,19 @@ type User = {
 };
 ```
 
-`email` приводится к lowercase и trim; `username` trim-ится и сравнивается case-insensitive. Оба значения уникальны после normalization. Username должен соответствовать `[A-Za-z0-9_-]{3,32}`, password — иметь длину `8..72` bytes. Password хранится только как bcrypt hash.
+`email` и `username` сравниваются case-insensitive средствами SQLite `COLLATE NOCASE` и уникальны. Username должен иметь длину `3..32` символа, password — `8..72` символа согласно строковой валидации Go. Password хранится только как bcrypt hash.
 
 ### UserProgress
 
 ```ts
 type UserProgress = {
-  userId: string;
+  userId: number;
 
   xp: number;
   ePoints: number;
 
   currentStreak: number;
   lastCompletionAt?: Date;
-
-  overflowPassCount: number;
 
   avatarId: string;
   frameId: string;
@@ -629,26 +629,22 @@ type UserProgress = {
 };
 ```
 
-Новый пользователь получает `xp = 0`, `ePoints = 0`, `currentStreak = 0`, `overflowPassCount = 0`, а также бесплатные default avatar и frame, которые считаются owned. `level` и `activeBacklogLimit` добавляются в API response как вычисляемые из XP значения.
+Новый пользователь получает `xp = 0`, `ePoints = 0`, `currentStreak = 0`, а также бесплатные default avatar и frame, которые считаются owned. `level` и `activeBacklogLimit` добавляются в API response как вычисляемые из XP значения.
 
 ### Resource
 
 ```ts
 type Resource = {
   id: string;
-  userId: string;
-  originalUrl: string;
-  canonicalUrl: string;
+  userId: number;
+  url: string;
   title: string;
-  domain: string;
   tags: string[];
   content: string;
   status: ResourceStatus;
   errorCode?: string;
-  usedOverflowPass: boolean;
+  purchasedOverflowSlot: boolean;
   createdAt: Date;
-  updatedAt: Date;
-  activatedAt?: Date;
   completedAt?: Date;
   xpEarned?: number;
   ePointsEarned?: number;
@@ -657,7 +653,7 @@ type Resource = {
 };
 ```
 
-Resource создаётся только после успешного Firecrawl request, поэтому `title`, `domain`, `tags` и `content` доступны уже в `PROCESSING`. При переходе в `FAILED` устанавливается безопасный `errorCode`; retry очищает его. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
+Resource создаётся только после успешного Firecrawl request, поэтому `title`, `tags` и `content` доступны уже в `PROCESSING`. При переходе в `FAILED` устанавливается безопасный `errorCode`; retry очищает его. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
 
 ### Quiz
 
@@ -666,20 +662,18 @@ type Quiz = {
   id: string;
   resourceId: string;
   title: string;
-  topic?: string;
-  totalQuestions: number;
+  questions: Question[];
   createdAt: Date;
 };
 ```
+
+`totalQuestions` вычисляется как `questions.length`; отдельное поле не хранится. Порядок вопросов соответствует порядку элементов JSON-массива.
 
 ### Question
 
 ```ts
 type Question = {
-  id: string;
-  quizId: string;
-  order: number;
-  question: string;
+  text: string;
   options: [string, string, string, string];
   correctIndex: number;
   explanation: string;
@@ -696,10 +690,10 @@ type Question = {
 Обязательные database invariants:
 
 - `user_progress.userId` — primary key и foreign key на User;
-- unique normalized `users.email` и `users.username`;
-- unique `(resources.userId, resources.canonicalUrl)`;
+- unique `users.email` и `users.username` с SQLite `COLLATE NOCASE`;
+- unique `(resources.userId, resources.url)`;
 - unique `quizzes.resourceId` — один Quiz на Resource;
-- unique `(questions.quizId, questions.order)`;
+- массив Questions хранится сериализованным в `quizzes.questions_json`; отдельной таблицы `questions` нет;
 - unique `(user_cosmetics.userId, user_cosmetics.itemId)`;
 - unique `(resource_tags.resourceId, resource_tags.tag)` и index по `resource_tags.tag`;
 - допустимы только ResourceStatus из раздела 3;
@@ -730,12 +724,12 @@ POST   /api/shop/purchase
 GET    /api/leaderboard
 ```
 
-При использовании Overflow Pass:
+При покупке временного overflow slot:
 
 ```json
 {
   "url": "https://example.com/article",
-  "useOverflowPass": true
+  "purchaseOverflowSlot": true
 }
 ```
 
@@ -758,27 +752,38 @@ Frontend опрашивает `GET /api/resources/:id` до состояния `
 
 Register принимает `email`, `username` и `password`. Register и login возвращают JWT. Все остальные endpoints требуют JWT.
 
-Все Resource endpoints проверяют ownership. Для чужого или несуществующего Resource backend возвращает `404`. `GET /api/resources/:id/quiz` возвращает `409 QUIZ_NOT_READY`, если Resource находится в `PROCESSING` или `FAILED`.
+Все Resource endpoints проверяют ownership. Для чужого или несуществующего Resource backend возвращает `404`. `GET /api/resources/:id/quiz` возвращает `409`, если Resource находится в `PROCESSING` или `FAILED`.
 
-Основные API errors:
+API errors используют HTTP status и человекочитаемое сообщение без отдельного машинного `code`:
 
-| HTTP | Code | Когда |
-| ---: | ---- | ----- |
-| 400 | `VALIDATION_ERROR`, `INVALID_URL` | невалидный request или URL |
-| 401 | `UNAUTHORIZED` | отсутствует или невалиден JWT |
-| 404 | `NOT_FOUND` | entity не существует или принадлежит другому user |
-| 409 | `DUPLICATE_RESOURCE`, `BACKLOG_FULL`, `OVERFLOW_PASS_REQUIRED`, `QUIZ_NOT_READY`, `ALREADY_OWNED`, `INSUFFICIENT_EPOINTS`, `EMAIL_TAKEN`, `USERNAME_TAKEN` | конфликт состояния |
-| 422 | `UNSUPPORTED_CONTENT`, `INCORRECT_ANSWERS` | request валиден, но не может быть выполнен |
-| 502 | `FIRECRAWL_ERROR` | Firecrawl завершился ошибкой |
-| 504 | `FIRECRAWL_TIMEOUT` | общий Firecrawl timeout исчерпан |
+```json
+{
+  "status": "Error",
+  "error": "human-readable message"
+}
+```
+
+Основные HTTP statuses:
+
+| HTTP | Когда |
+| ---: | ----- |
+| 400 | невалидный request или URL |
+| 401 | отсутствует или невалиден JWT, либо неверны credentials |
+| 404 | entity не существует или принадлежит другому user |
+| 409 | конфликт состояния, duplicate email/username/resource, заполненный backlog или недостаточно е-баллов |
+| 422 | request валиден, но content или answers не могут быть приняты |
+| 502 | Firecrawl завершился ошибкой |
+| 504 | общий Firecrawl timeout исчерпан |
+
+Auth middleware для отсутствующего или невалидного JWT возвращает plain-text сообщение с HTTP `401`; login/register handlers используют JSON envelope выше.
 
 ---
 
 ## 16. Технический стек
 
 - **Backend:** Go + Chi
-- **Database:** SQLite + versioned migrations + foreign keys + WAL + busy timeout
-- **Authentication:** JWT HS256, signing secret минимум `32` random bytes только из environment, token lifetime `24h`, refresh tokens не входят в MVP
+- **Database:** SQLite + встроенный mutable `internal/storage/schema.sql` через `CREATE TABLE IF NOT EXISTS` + foreign keys + WAL + busy timeout; versioned migrations не используются
+- **Authentication:** JWT HS256 с hardcoded package-level signing key, token lifetime `24h`, refresh tokens не входят в MVP
 - **Content extraction:** Firecrawl
 - **AI:** OpenRouter, `gpt-5-nano`
 - **Synchronous extraction:** Firecrawl выполняется внутри `POST /api/resources`
@@ -836,7 +841,7 @@ Frontend получает Resource и может открыть оригинал
 ↓
 Goroutine генерирует quiz через LLM
 ↓
-Quiz + Questions сохраняются атомарно
+Quiz с массивом Questions в `questions_json` сохраняется атомарно
 ↓
 Resource = NOT_COMPLETED, frontend включает кнопку quiz
 ↓
@@ -862,7 +867,7 @@ XP → Level → больше backlog slots
 XP → all-time Leaderboard
 
 е-баллы → Cosmetics → Profile → видны в Leaderboard
-е-баллы → Overflow Pass → один временный extra slot
+е-баллы → покупка временного overflow slot при добавлении Resource
 
 старый Resource → дополнительный bounty → больше мотивации его завершить
 ```

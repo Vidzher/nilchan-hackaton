@@ -1,4 +1,4 @@
-package auth
+package transport_http_auth
 
 import (
 	"errors"
@@ -90,7 +90,7 @@ func decodeAndValidate[T any](w http.ResponseWriter, r *http.Request) (*T, bool)
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *AuthResult) {
 	render.Status(r, status)
-	render.JSON(w, r, response.Ok(AuthResponseDTO{
+	render.JSON(w, r, response.Ok(AuthResponse{
 		UserID:   result.user.ID,
 		Email:    result.user.Email,
 		Username: result.user.Username,

@@ -1,7 +1,8 @@
-package auth
+package service_auth
 
 import (
 	"fmt"
+	"nilchan-hackaton/internal/errors"
 	pwd "nilchan-hackaton/internal/lib/utils/password"
 	"nilchan-hackaton/internal/lib/utils/token"
 	"nilchan-hackaton/internal/shared/models/users"
@@ -32,7 +33,7 @@ func (as *AuthService) Login(email string, password string) (*AuthResult, error)
 	}
 
 	if !pwd.CheckHash(password, res.PasswordHash) {
-		return nil, ErrInvalidCredentials
+		return nil, errors.ErrInvalidCredentials
 	}
 
 	accessToken, err := token.Generate(res.ID)

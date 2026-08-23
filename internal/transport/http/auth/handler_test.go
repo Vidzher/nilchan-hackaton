@@ -1,4 +1,4 @@
-package auth
+package transport_http_auth
 
 import (
 	"errors"

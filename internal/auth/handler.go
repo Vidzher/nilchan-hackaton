@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"nilchan-hackaton/internal/httpapi/request"
 	"nilchan-hackaton/internal/httpapi/response"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,26 +18,17 @@ type service interface {
 }
 
 type Handler struct {
-	service service
+	service   service
+	validator *validator.Validate
 }
 
-var validate = validator.New()
-
-func init() {
-	if err := validate.RegisterValidation("bcrypt_max_bytes", func(fl validator.FieldLevel) bool {
-		return len([]byte(fl.Field().String())) <= 72
-	}); err != nil {
-		panic(err)
-	}
-}
-
-func NewHandler(service service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service service, validate *validator.Validate) *Handler {
+	return &Handler{service: service, validator: validate}
 }
 
 func (h *Handler) HandleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := decodeAndValidate[LoginRequestDTO](w, r)
+		req, ok := request.DecodeAndValidate[LoginRequestDTO](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -59,7 +51,7 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 
 func (h *Handler) HandleRegister() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := decodeAndValidate[RegisterRequestDTO](w, r)
+		req, ok := request.DecodeAndValidate[RegisterRequestDTO](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -80,20 +72,6 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 
 		renderAuthResult(w, r, http.StatusCreated, result)
 	}
-}
-
-func decodeAndValidate[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
-	var request T
-	if err := render.DecodeJSON(r.Body, &request); err != nil {
-		renderError(w, r, http.StatusBadRequest, "invalid request body")
-		return nil, false
-	}
-	if err := validate.Struct(request); err != nil {
-		renderError(w, r, http.StatusBadRequest, "invalid request")
-		return nil, false
-	}
-
-	return &request, true
 }
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *Result) {

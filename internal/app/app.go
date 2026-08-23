@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
+	"nilchan-hackaton/internal/httpapi/validation"
 	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/storage"
 
@@ -38,9 +39,15 @@ func New(cfg *config.Config) (*App, error) {
 		storage: store,
 	}
 
+	validate, err := validation.New()
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize validator: %w", err)
+	}
+
 	authRepo := auth.NewRepository(store)
 	authService := auth.NewService(authRepo)
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, validate)
 
 	firecrawlClient, err := parser.NewFirecrawlClient(
 		cfg.Firecrawl.APIKey,

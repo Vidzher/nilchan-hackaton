@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	authToken "nilchan-hackaton/internal/auth/token"
+	"nilchan-hackaton/internal/httpapi/validation"
 )
 
 type stubAuthService struct {
@@ -26,6 +27,11 @@ func (s stubAuthService) Register(_, _, _ string) (*Result, error) {
 }
 
 func TestHandleLoginErrorMapping(t *testing.T) {
+	validate, err := validation.New()
+	if err != nil {
+		t.Fatalf("create validator: %v", err)
+	}
+
 	tests := []struct {
 		name       string
 		err        error
@@ -50,7 +56,7 @@ func TestHandleLoginErrorMapping(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler := NewHandler(stubAuthService{loginErr: test.err})
+			handler := NewHandler(stubAuthService{loginErr: test.err}, validate)
 			request := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(`{"email":"user@example.com","password":"password"}`))
 			response := httptest.NewRecorder()
 
@@ -110,6 +116,11 @@ func TestMiddlewareRequiresBearerScheme(t *testing.T) {
 }
 
 func TestHandleRegisterErrorMapping(t *testing.T) {
+	validate, err := validation.New()
+	if err != nil {
+		t.Fatalf("create validator: %v", err)
+	}
+
 	tests := []struct {
 		name       string
 		body       string
@@ -160,7 +171,7 @@ func TestHandleRegisterErrorMapping(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler := NewHandler(stubAuthService{registerErr: test.err})
+			handler := NewHandler(stubAuthService{registerErr: test.err}, validate)
 			request := httptest.NewRequest(http.MethodPost, "/api/register", strings.NewReader(test.body))
 			response := httptest.NewRecorder()
 

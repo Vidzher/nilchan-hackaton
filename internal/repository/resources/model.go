@@ -9,14 +9,11 @@ type ResourceModel struct {
 	Title                 string
 	Content               string
 	Status                string
-	ErrorCode             *string
 	PurchasedOverflowSlot bool
 	CreatedAt             time.Time
 	CompletedAt           *time.Time
 	XPEarned              *int
 	EPointsEarned         *int
-	OldBacklogBonus       *int
-	FullBacklogBonus      *int
 }
 
 type ResourceTagModel struct {

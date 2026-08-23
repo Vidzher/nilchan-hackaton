@@ -21,14 +21,11 @@ type Resource struct {
 	Tags                  []string
 	Content               string
 	Status                Status
-	ErrorCode             *string
 	PurchasedOverflowSlot bool
 	CreatedAt             time.Time
 	CompletedAt           *time.Time
 	XPEarned              *int
 	EPointsEarned         *int
-	OldBacklogBonus       *int
-	FullBacklogBonus      *int
 }
 
 type CreateResourceInput struct {

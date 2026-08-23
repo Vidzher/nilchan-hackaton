@@ -76,7 +76,7 @@ func TestMiddlewareRequiresBearerScheme(t *testing.T) {
 	}
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID, err := authToken.UserIDFrom(r.Context())
+		userID, err := authToken.UserIDFromContext(r.Context())
 		if err != nil || userID != 42 {
 			t.Fatalf("authenticated user = %d, %v; want 42", userID, err)
 		}

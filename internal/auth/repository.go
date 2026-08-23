@@ -1,32 +1,33 @@
-package repository_auth
+package auth
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"nilchan-hackaton/internal/shared/models/users"
-	"nilchan-hackaton/internal/storage"
 	"strings"
+
+	"nilchan-hackaton/internal/storage"
+	"nilchan-hackaton/internal/user"
 
 	"github.com/mattn/go-sqlite3"
 )
 
-type AuthRepository struct {
+type repository struct {
 	storage *storage.Storage
 }
 
-func NewAuthRepository(storage *storage.Storage) *AuthRepository {
-	return &AuthRepository{storage: storage}
+func NewRepository(storage *storage.Storage) *repository {
+	return &repository{storage: storage}
 }
 
-func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.User, error) {
+func (ar *repository) create(email, username, passwordHash string) (*user.User, error) {
 	tx, err := ar.storage.DB.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin user creation: %w", err)
 	}
 	defer tx.Rollback()
 
-	var created users.User
+	var created user.User
 	err = tx.QueryRow(`
 		INSERT INTO users(email, username, password_hash)
 		VALUES(?, ?, ?)
@@ -58,9 +59,9 @@ func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.U
 	if _, err := tx.Exec(
 		"INSERT INTO user_cosmetics(user_id, item_id) VALUES(?, ?), (?, ?)",
 		created.ID,
-		users.DefaultAvatarID,
+		user.DefaultAvatarID,
 		created.ID,
-		users.DefaultFrameID,
+		user.DefaultFrameID,
 	); err != nil {
 		return nil, fmt.Errorf("grant default cosmetics: %w", err)
 	}
@@ -71,8 +72,8 @@ func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.U
 	return &created, nil
 }
 
-func (ar *AuthRepository) FindOne(email string) (*users.User, error) {
-	var found users.User
+func (ar *repository) findOne(email string) (*user.User, error) {
+	var found user.User
 	err := ar.storage.DB.QueryRow(`
 		SELECT id, email, username, password_hash, created_at
 		FROM users

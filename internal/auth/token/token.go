@@ -14,7 +14,7 @@ type contextKey string
 
 const userIDContextKey contextKey = "user_id"
 
-func Generate(userID int) (string, error) {
+func Generate(userID int64) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Срок действия — 24 часа
@@ -34,13 +34,13 @@ func Parse(tokenString string) (*jwt.Token, error) {
 	})
 }
 
-func UserIDFrom(ctx context.Context) (int, error) {
+func UserIDFrom(ctx context.Context) (int64, error) {
 	user := ctx.Value(userIDContextKey)
 	if user == nil {
 		return 0, fmt.Errorf("cannot get user id from context")
 	}
 
-	userID, ok := user.(int)
+	userID, ok := user.(int64)
 	if !ok {
 		return 0, fmt.Errorf("invalid user id type %T", user)
 	}
@@ -48,11 +48,11 @@ func UserIDFrom(ctx context.Context) (int, error) {
 	return userID, nil
 }
 
-func ContextWithUserID(ctx context.Context, userID int) context.Context {
+func ContextWithUserID(ctx context.Context, userID int64) context.Context {
 	return context.WithValue(ctx, userIDContextKey, userID)
 }
 
-func UserIDFromClaims(claims jwt.MapClaims) (int, error) {
+func UserIDFromClaims(claims jwt.MapClaims) (int64, error) {
 	rawUserID, ok := claims["user_id"]
 	if !ok {
 		return 0, fmt.Errorf("user_id claim is missing")
@@ -60,11 +60,11 @@ func UserIDFromClaims(claims jwt.MapClaims) (int, error) {
 
 	switch value := rawUserID.(type) {
 	case float64:
-		return int(value), nil
+		return int64(value), nil
 	case int:
-		return value, nil
+		return int64(value), nil
 	case int64:
-		return int(value), nil
+		return value, nil
 	default:
 		return 0, fmt.Errorf("invalid user_id claim type %T", rawUserID)
 	}

@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"nilchan-hackaton/internal/config"
-	"nilchan-hackaton/internal/domain/auth"
+	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/domain/pparser"
-	"nilchan-hackaton/internal/shared/middlewares"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -95,8 +94,8 @@ func (a *App) Close() error {
 }
 
 func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
-	authRepo := auth.NewAuthRepository(a.storage)
-	authService := auth.NewAuthService(authRepo)
+	authRepo := auth.NewRepository(a.storage)
+	authService := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authService)
 
 	parserService := pparser.NewParserService(fcClient)
@@ -111,7 +110,7 @@ func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
 		r.Post("/register", authHandler.HandleRegister())
 
 		r.Group(func(r chi.Router) {
-			r.Use(middlewares.AuthMiddleware)
+			r.Use(auth.Middleware)
 		})
 	})
 }

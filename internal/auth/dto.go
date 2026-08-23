@@ -1,4 +1,4 @@
-package transport_http_auth
+package auth
 
 type LoginRequestDTO struct {
 	Email    string `json:"email" validate:"required,email"`
@@ -8,16 +8,12 @@ type LoginRequestDTO struct {
 type RegisterRequestDTO struct {
 	Email    string `json:"email" validate:"required,email"`
 	Username string `json:"username" validate:"required,min=3,max=32"`
-	Password string `json:"password" validate:"required,min=8,max=72"`
+	Password string `json:"password" validate:"required,min=8,max=72,bcrypt_max_bytes"`
 }
 
-type AuthUserDTO struct {
-	ID       int64  `json:"id"`
+type AuthResponseDTO struct {
+	UserID   int64  `json:"userId"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
-}
-
-type AuthResponse struct {
-	Token string      `json:"token"`
-	User  AuthUserDTO `json:"user"`
+	Token    string `json:"token"`
 }

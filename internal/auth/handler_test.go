@@ -1,4 +1,4 @@
-package transport_http_auth
+package auth
 
 import (
 	"errors"
@@ -6,20 +6,22 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	authToken "nilchan-hackaton/internal/auth/token"
 )
 
 type stubAuthService struct {
-	loginResult    *AuthResult
+	loginResult    *Result
 	loginErr       error
-	registerResult *AuthResult
+	registerResult *Result
 	registerErr    error
 }
 
-func (s stubAuthService) Login(_, _ string) (*AuthResult, error) {
+func (s stubAuthService) Login(_, _ string) (*Result, error) {
 	return s.loginResult, s.loginErr
 }
 
-func (s stubAuthService) Register(_, _, _ string) (*AuthResult, error) {
+func (s stubAuthService) Register(_, _, _ string) (*Result, error) {
 	return s.registerResult, s.registerErr
 }
 
@@ -67,6 +69,46 @@ func TestHandleLoginErrorMapping(t *testing.T) {
 	}
 }
 
+func TestMiddlewareRequiresBearerScheme(t *testing.T) {
+	jwt, err := authToken.Generate(42)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID, err := authToken.UserIDFrom(r.Context())
+		if err != nil || userID != 42 {
+			t.Fatalf("authenticated user = %d, %v; want 42", userID, err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	tests := []struct {
+		name       string
+		header     string
+		wantStatus int
+	}{
+		{name: "raw token", header: jwt, wantStatus: http.StatusUnauthorized},
+		{name: "wrong scheme", header: "Basic " + jwt, wantStatus: http.StatusUnauthorized},
+		{name: "empty bearer token", header: "Bearer ", wantStatus: http.StatusUnauthorized},
+		{name: "valid bearer token", header: "Bearer " + jwt, wantStatus: http.StatusNoContent},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
+			request.Header.Set("Authorization", test.header)
+			response := httptest.NewRecorder()
+
+			Middleware(next).ServeHTTP(response, request)
+
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d", response.Code, test.wantStatus)
+			}
+		})
+	}
+}
+
 func TestHandleRegisterErrorMapping(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -84,6 +126,12 @@ func TestHandleRegisterErrorMapping(t *testing.T) {
 		{
 			name:       "invalid fields",
 			body:       `{"email":"bad","username":"x","password":"short"}`,
+			wantStatus: http.StatusBadRequest,
+			wantBody:   "invalid request",
+		},
+		{
+			name:       "password exceeds bcrypt byte limit",
+			body:       `{"email":"user@example.com","username":"user","password":"` + strings.Repeat("é", 40) + `"}`,
 			wantStatus: http.StatusBadRequest,
 			wantBody:   "invalid request",
 		},

@@ -1,28 +1,36 @@
-package transport_http_auth
+package auth
 
 import (
 	"errors"
 	"log"
 	"net/http"
-	"nilchan-hackaton/internal/lib/api/response"
+	"nilchan-hackaton/internal/httpapi/response"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 )
 
-type Service interface {
-	Login(email, password string) (*AuthResult, error)
-	Register(email, username, password string) (*AuthResult, error)
+type service interface {
+	Login(email, password string) (*Result, error)
+	Register(email, username, password string) (*Result, error)
 }
 
 type Handler struct {
-	service Service
+	service service
 }
 
 var validate = validator.New()
 
-func NewHandler(service Service) *Handler {
+func init() {
+	if err := validate.RegisterValidation("bcrypt_max_bytes", func(fl validator.FieldLevel) bool {
+		return len([]byte(fl.Field().String())) <= 72
+	}); err != nil {
+		panic(err)
+	}
+}
+
+func NewHandler(service service) *Handler {
 	return &Handler{service: service}
 }
 
@@ -88,13 +96,13 @@ func decodeAndValidate[T any](w http.ResponseWriter, r *http.Request) (*T, bool)
 	return &request, true
 }
 
-func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *AuthResult) {
+func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *Result) {
 	render.Status(r, status)
-	render.JSON(w, r, response.Ok(AuthResponse{
-		UserID:   result.user.ID,
-		Email:    result.user.Email,
-		Username: result.user.Username,
-		Token:    result.token,
+	render.JSON(w, r, response.Ok(AuthResponseDTO{
+		UserID:   result.User.ID,
+		Email:    result.User.Email,
+		Username: result.User.Username,
+		Token:    result.Token,
 	}))
 }
 

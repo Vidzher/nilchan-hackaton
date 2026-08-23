@@ -58,15 +58,13 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 
 		result, err := h.service.Register(req.Email, req.Username, req.Password)
 		if err != nil {
-			switch {
-			case errors.Is(err, ErrEmailTaken):
-				renderError(w, r, http.StatusConflict, ErrEmailTaken.Error())
-			case errors.Is(err, ErrUsernameTaken):
-				renderError(w, r, http.StatusConflict, ErrUsernameTaken.Error())
-			default:
-				logAuthError(r, "registration failed", err)
-				renderError(w, r, http.StatusInternalServerError, "internal server error")
+			if errors.Is(err, ErrUserAlreadyExists) {
+				renderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())
+				return
 			}
+
+			logAuthError(r, "registration failed", err)
+			renderError(w, r, http.StatusInternalServerError, "internal server error")
 			return
 		}
 

@@ -147,18 +147,11 @@ func TestHandleRegisterErrorMapping(t *testing.T) {
 			wantBody:   "invalid request",
 		},
 		{
-			name:       "email taken",
+			name:       "user already exists",
 			body:       `{"email":"user@example.com","username":"user","password":"password"}`,
-			err:        ErrEmailTaken,
+			err:        ErrUserAlreadyExists,
 			wantStatus: http.StatusConflict,
-			wantBody:   "email already exists",
-		},
-		{
-			name:       "username taken",
-			body:       `{"email":"user@example.com","username":"user","password":"password"}`,
-			err:        ErrUsernameTaken,
-			wantStatus: http.StatusConflict,
-			wantBody:   "username already exists",
+			wantBody:   "email or username already exists",
 		},
 		{
 			name:       "internal error",

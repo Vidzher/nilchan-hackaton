@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"nilchan-hackaton/internal/storage"
 	"nilchan-hackaton/internal/user"
@@ -18,25 +17,6 @@ type repository struct {
 
 func NewRepository(storage *storage.Storage) *repository {
 	return &repository{storage: storage}
-}
-
-func (ar *repository) checkRegistrationConflict(email, username string) error {
-	var emailTaken, usernameTaken bool
-	if err := ar.storage.DB.QueryRow(`
-		SELECT
-			EXISTS(SELECT 1 FROM users WHERE email = ?),
-			EXISTS(SELECT 1 FROM users WHERE username = ?)
-	`, email, username).Scan(&emailTaken, &usernameTaken); err != nil {
-		return fmt.Errorf("check registration conflict: %w", err)
-	}
-
-	if emailTaken {
-		return ErrEmailTaken
-	}
-	if usernameTaken {
-		return ErrUsernameTaken
-	}
-	return nil
 }
 
 func (ar *repository) create(email, username, passwordHash string) (*user.User, error) {
@@ -61,12 +41,7 @@ func (ar *repository) create(email, username, passwordHash string) (*user.User, 
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			switch {
-			case strings.Contains(err.Error(), "users.email"):
-				return nil, ErrEmailTaken
-			case strings.Contains(err.Error(), "users.username"):
-				return nil, ErrUsernameTaken
-			}
+			return nil, ErrUserAlreadyExists
 		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/auth"
-	"nilchan-hackaton/internal/domain/pparser"
+	"nilchan-hackaton/internal/config"
+	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -38,7 +38,11 @@ func New(cfg *config.Config) (*App, error) {
 		storage: store,
 	}
 
-	firecrawlClient, err := pparser.NewFirecrawlClient(
+	authRepo := auth.NewRepository(store)
+	authService := auth.NewService(authRepo)
+	authHandler := auth.NewHandler(authService)
+
+	firecrawlClient, err := parser.NewFirecrawlClient(
 		cfg.Firecrawl.APIKey,
 		cfg.Firecrawl.BaseURL,
 		&http.Client{Timeout: cfg.Firecrawl.Timeout},
@@ -48,7 +52,10 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, err
 	}
 
-	a.registerRouter(firecrawlClient)
+	parserService := parser.NewService(firecrawlClient)
+	_ = parserService
+
+	a.registerRoutes(authHandler)
 
 	return a, nil
 }
@@ -93,14 +100,7 @@ func (a *App) Close() error {
 	return a.storage.Close()
 }
 
-func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
-	authRepo := auth.NewRepository(a.storage)
-	authService := auth.NewService(authRepo)
-	authHandler := auth.NewHandler(authService)
-
-	parserService := pparser.NewParserService(fcClient)
-	_ = parserService
-
+func (a *App) registerRoutes(authHandler *auth.Handler) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)

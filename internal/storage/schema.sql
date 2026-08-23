@@ -52,27 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_resource_tags_tag ON resource_tags(tag);
 
 CREATE TABLE IF NOT EXISTS quizzes (
     id INTEGER PRIMARY KEY,
-    resource_id INTEGER NOT NULL UNIQUE,
+    resource_id INTEGER NOT NULL UNIQUE REFERENCES resources(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    questions_json TEXT NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY,
-    quiz_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    correct_answer_id INTEGER NOT NULL,
-    FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS answers (
-    id INTEGER PRIMARY KEY,
-    question_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_questions_quiz_id
-    ON questions(quiz_id);
-CREATE INDEX IF NOT EXISTS idx_answers_question_id
-    ON answers(question_id);

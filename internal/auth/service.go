@@ -9,6 +9,7 @@ import (
 )
 
 type userRepository interface {
+	checkRegistrationConflict(email, username string) error
 	create(email, username, passwordHash string) (*user.User, error)
 	findOne(email string) (*user.User, error)
 }
@@ -45,6 +46,10 @@ func (as *Service) Login(email string, password string) (*Result, error) {
 }
 
 func (as *Service) Register(email, username, password string) (*Result, error) {
+	if err := as.repo.checkRegistrationConflict(email, username); err != nil {
+		return nil, err
+	}
+
 	pwdHash, err := pwd.Hash(password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)

@@ -20,6 +20,25 @@ func NewRepository(storage *storage.Storage) *repository {
 	return &repository{storage: storage}
 }
 
+func (ar *repository) checkRegistrationConflict(email, username string) error {
+	var emailTaken, usernameTaken bool
+	if err := ar.storage.DB.QueryRow(`
+		SELECT
+			EXISTS(SELECT 1 FROM users WHERE email = ?),
+			EXISTS(SELECT 1 FROM users WHERE username = ?)
+	`, email, username).Scan(&emailTaken, &usernameTaken); err != nil {
+		return fmt.Errorf("check registration conflict: %w", err)
+	}
+
+	if emailTaken {
+		return ErrEmailTaken
+	}
+	if usernameTaken {
+		return ErrUsernameTaken
+	}
+	return nil
+}
+
 func (ar *repository) create(email, username, passwordHash string) (*user.User, error) {
 	tx, err := ar.storage.DB.Begin()
 	if err != nil {

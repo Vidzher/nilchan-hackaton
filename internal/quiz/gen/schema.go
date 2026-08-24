@@ -1,47 +1,28 @@
-package llm
+package gen
 
-const quizSchemaJSON = `{
+const generationSchemaName = "learning_backlog_quiz"
+
+const generationSchemaJSON = `{
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "title",
-    "topic",
-    "difficulty",
-    "questions"
-  ],
+  "required": ["questions"],
   "properties": {
-    "title": {
-      "type": "string",
-      "minLength": 1
-    },
-    "topic": {
-      "type": "string",
-      "minLength": 1
-    },
-    "difficulty": {
-      "type": "string",
-      "enum": [
-        "easy",
-        "medium",
-        "hard"
-      ]
-    },
     "questions": {
       "type": "array",
       "minItems": 5,
-      "maxItems": 5,
+      "maxItems": 10,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "question",
+          "text",
           "options",
           "correctIndex",
           "explanation",
           "evidence"
         ],
         "properties": {
-          "question": {
+          "text": {
             "type": "string",
             "minLength": 1
           },
@@ -49,6 +30,7 @@ const quizSchemaJSON = `{
             "type": "array",
             "minItems": 4,
             "maxItems": 4,
+            "uniqueItems": true,
             "items": {
               "type": "string",
               "minLength": 1

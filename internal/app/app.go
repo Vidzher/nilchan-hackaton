@@ -1,12 +1,14 @@
 package app
 
 import (
-	"log"
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
-	"nilchan-hackaton/internal/domain/auth"
-	"nilchan-hackaton/internal/domain/pparser"
-	"nilchan-hackaton/internal/shared/middlewares"
+	"nilchan-hackaton/internal/httpapi/validation"
+	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -20,9 +22,9 @@ type App struct {
 }
 
 func New(cfg *config.Config) (*App, error) {
-	storage, err := storage.NewStorage(cfg.StoragePath)
+	store, err := storage.NewStorage(cfg.StoragePath)
 	if err != nil {
-		log.Fatalf("storage init error: %v", err.Error())
+		return nil, fmt.Errorf("initialize storage: %w", err)
 	}
 
 	router := chi.NewRouter()
@@ -34,24 +36,38 @@ func New(cfg *config.Config) (*App, error) {
 	a := &App{
 		cfg:     cfg,
 		router:  router,
-		storage: storage,
+		storage: store,
 	}
 
-	firecrawlClient, err := pparser.NewFirecrawlClient(
+	validate, err := validation.New()
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize validator: %w", err)
+	}
+
+	authRepo := auth.NewRepository(store)
+	authService := auth.NewService(authRepo)
+	authHandler := auth.NewHandler(authService, validate)
+
+	firecrawlClient, err := parser.NewFirecrawlClient(
 		cfg.Firecrawl.APIKey,
 		cfg.Firecrawl.BaseURL,
 		&http.Client{Timeout: cfg.Firecrawl.Timeout},
 	)
 	if err != nil {
+		store.Close()
 		return nil, err
 	}
 
-	a.registerRouter(firecrawlClient)
+	parserService := parser.NewService(firecrawlClient)
+	_ = parserService
+
+	a.registerRoutes(authHandler)
 
 	return a, nil
 }
 
-func (a *App) Run() {
+func (a *App) Run(ctx context.Context) error {
 	srv := http.Server{
 		Addr:         a.cfg.HTTPServer.Address,
 		Handler:      a.router,
@@ -60,19 +76,38 @@ func (a *App) Run() {
 		IdleTimeout:  a.cfg.HTTPServer.IdleTimeout,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal("failed to start server")
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErrors:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("serve HTTP: %w", err)
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTPServer.ShutdownTimeout)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("shut down HTTP server: %w", err)
+		}
+
+		err := <-serverErrors
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("serve HTTP: %w", err)
+		}
+		return nil
 	}
 }
 
-func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
-	authRepo := auth.NewAuthRepository(a.storage)
-	authService := auth.NewAuthService(authRepo)
-	authHandler := auth.NewHandler(authService)
+func (a *App) Close() error {
+	return a.storage.Close()
+}
 
-	parserService := pparser.NewParserService(fcClient)
-	_ = parserService
-
+func (a *App) registerRoutes(authHandler *auth.Handler) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
@@ -82,7 +117,7 @@ func (a *App) registerRouter(fcClient *pparser.FirecrawlClient) {
 		r.Post("/register", authHandler.HandleRegister())
 
 		r.Group(func(r chi.Router) {
-			r.Use(middlewares.AuthMiddleware)
+			r.Use(auth.Middleware)
 		})
 	})
 }

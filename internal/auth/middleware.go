@@ -1,14 +1,15 @@
-package middlewares
+package auth
 
 import (
 	"net/http"
-	"nilchan-hackaton/internal/lib/utils/token"
 	"strings"
+
+	"nilchan-hackaton/internal/auth/token"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -17,7 +18,17 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == "" || strings.ContainsAny(tokenString, " \t") {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+
 		t, err := token.Parse(tokenString)
 		if err != nil || !t.Valid {
 			http.Error(w, "invalid token", http.StatusUnauthorized)

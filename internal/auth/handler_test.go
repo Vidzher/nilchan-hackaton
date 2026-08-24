@@ -1,29 +1,38 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	authToken "nilchan-hackaton/internal/auth/token"
+	"nilchan-hackaton/internal/httpapi/validation"
 )
 
 type stubAuthService struct {
-	loginResult    *AuthResult
+	loginResult    *Result
 	loginErr       error
-	registerResult *AuthResult
+	registerResult *Result
 	registerErr    error
 }
 
-func (s stubAuthService) Login(_, _ string) (*AuthResult, error) {
+func (s stubAuthService) Login(_ context.Context, _, _ string) (*Result, error) {
 	return s.loginResult, s.loginErr
 }
 
-func (s stubAuthService) Register(_, _, _ string) (*AuthResult, error) {
+func (s stubAuthService) Register(_ context.Context, _, _, _ string) (*Result, error) {
 	return s.registerResult, s.registerErr
 }
 
 func TestHandleLoginErrorMapping(t *testing.T) {
+	validate, err := validation.New()
+	if err != nil {
+		t.Fatalf("create validator: %v", err)
+	}
+
 	tests := []struct {
 		name       string
 		err        error
@@ -48,7 +57,7 @@ func TestHandleLoginErrorMapping(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler := NewHandler(stubAuthService{loginErr: test.err})
+			handler := NewHandler(stubAuthService{loginErr: test.err}, validate)
 			request := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(`{"email":"user@example.com","password":"password"}`))
 			response := httptest.NewRecorder()
 
@@ -67,7 +76,52 @@ func TestHandleLoginErrorMapping(t *testing.T) {
 	}
 }
 
+func TestMiddlewareRequiresBearerScheme(t *testing.T) {
+	jwt, err := authToken.Generate(42)
+	if err != nil {
+		t.Fatalf("generate token: %v", err)
+	}
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID, err := authToken.UserIDFromContext(r.Context())
+		if err != nil || userID != 42 {
+			t.Fatalf("authenticated user = %d, %v; want 42", userID, err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	tests := []struct {
+		name       string
+		header     string
+		wantStatus int
+	}{
+		{name: "raw token", header: jwt, wantStatus: http.StatusUnauthorized},
+		{name: "wrong scheme", header: "Basic " + jwt, wantStatus: http.StatusUnauthorized},
+		{name: "empty bearer token", header: "Bearer ", wantStatus: http.StatusUnauthorized},
+		{name: "valid bearer token", header: "Bearer " + jwt, wantStatus: http.StatusNoContent},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
+			request.Header.Set("Authorization", test.header)
+			response := httptest.NewRecorder()
+
+			Middleware(next).ServeHTTP(response, request)
+
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d", response.Code, test.wantStatus)
+			}
+		})
+	}
+}
+
 func TestHandleRegisterErrorMapping(t *testing.T) {
+	validate, err := validation.New()
+	if err != nil {
+		t.Fatalf("create validator: %v", err)
+	}
+
 	tests := []struct {
 		name       string
 		body       string
@@ -88,18 +142,17 @@ func TestHandleRegisterErrorMapping(t *testing.T) {
 			wantBody:   "invalid request",
 		},
 		{
-			name:       "email taken",
-			body:       `{"email":"user@example.com","username":"user","password":"password"}`,
-			err:        ErrEmailTaken,
-			wantStatus: http.StatusConflict,
-			wantBody:   "email already exists",
+			name:       "password exceeds bcrypt byte limit",
+			body:       `{"email":"user@example.com","username":"user","password":"` + strings.Repeat("é", 40) + `"}`,
+			wantStatus: http.StatusBadRequest,
+			wantBody:   "invalid request",
 		},
 		{
-			name:       "username taken",
+			name:       "user already exists",
 			body:       `{"email":"user@example.com","username":"user","password":"password"}`,
-			err:        ErrUsernameTaken,
+			err:        ErrUserAlreadyExists,
 			wantStatus: http.StatusConflict,
-			wantBody:   "username already exists",
+			wantBody:   "email or username already exists",
 		},
 		{
 			name:       "internal error",
@@ -112,7 +165,7 @@ func TestHandleRegisterErrorMapping(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler := NewHandler(stubAuthService{registerErr: test.err})
+			handler := NewHandler(stubAuthService{registerErr: test.err}, validate)
 			request := httptest.NewRequest(http.MethodPost, "/api/register", strings.NewReader(test.body))
 			response := httptest.NewRecorder()
 

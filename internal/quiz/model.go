@@ -1,13 +1,10 @@
 package quiz
 
-import "time"
-
 type Quiz struct {
-	ID         string
-	ResourceID string
+	ID         int64
+	ResourceID int64
 	Title      string
 	Questions  []Question
-	CreatedAt  time.Time
 }
 
 type Question struct {

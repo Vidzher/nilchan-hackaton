@@ -12,21 +12,18 @@ const (
 )
 
 type Resource struct {
-	ID                    string
-	UserID                int
+	ID                    int64
+	UserID                int64
 	URL                   string
 	Title                 string
 	Tags                  []string
 	Content               string
 	Status                Status
-	ErrorCode             *string
 	PurchasedOverflowSlot bool
 	CreatedAt             time.Time
 	CompletedAt           *time.Time
 	XPEarned              *int
 	EPointsEarned         *int
-	OldBacklogBonus       *int
-	FullBacklogBonus      *int
 }
 
 func (s Status) Valid() bool {

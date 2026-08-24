@@ -25,20 +25,17 @@ CREATE TABLE IF NOT EXISTS user_cosmetics (
 );
 
 CREATE TABLE IF NOT EXISTS resources (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('PROCESSING', 'FAILED', 'NOT_COMPLETED', 'COMPLETED')),
-    error_code TEXT,
     purchased_overflow_slot INTEGER NOT NULL DEFAULT 0 CHECK (purchased_overflow_slot IN (0, 1)),
     created_at DATETIME NOT NULL,
     completed_at DATETIME,
     xp_earned INTEGER CHECK (xp_earned IS NULL OR xp_earned >= 0),
     e_points_earned INTEGER CHECK (e_points_earned IS NULL OR e_points_earned >= 0),
-    old_backlog_bonus INTEGER CHECK (old_backlog_bonus IS NULL OR old_backlog_bonus >= 0),
-    full_backlog_bonus INTEGER CHECK (full_backlog_bonus IS NULL OR full_backlog_bonus >= 0),
     UNIQUE (user_id, url)
 );
 
@@ -46,7 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_resources_user_created_at ON resources(user_id, c
 CREATE INDEX IF NOT EXISTS idx_resources_user_status ON resources(user_id, status);
 
 CREATE TABLE IF NOT EXISTS resource_tags (
-    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
     tag TEXT NOT NULL,
     PRIMARY KEY (resource_id, tag)
 );
@@ -54,9 +51,8 @@ CREATE TABLE IF NOT EXISTS resource_tags (
 CREATE INDEX IF NOT EXISTS idx_resource_tags_tag ON resource_tags(tag);
 
 CREATE TABLE IF NOT EXISTS quizzes (
-    id TEXT PRIMARY KEY,
-    resource_id TEXT NOT NULL UNIQUE REFERENCES resources(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY,
+    resource_id INTEGER NOT NULL UNIQUE REFERENCES resources(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    questions_json TEXT NOT NULL,
-    created_at DATETIME NOT NULL
+    questions_json TEXT NOT NULL
 );

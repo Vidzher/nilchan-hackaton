@@ -128,7 +128,7 @@ Backend выполняет:
 2. предварительный duplicate и capacity check;
 3. синхронное получение content через Firecrawl;
 4. content validation;
-5. получение title и tags из Firecrawl metadata или локально из content;
+5. получение title из Firecrawl metadata и tags из metadata keywords или локально из content;
 6. повторный duplicate и capacity check в database transaction;
 7. при необходимости списание стоимости временного overflow slot и создание Resource со статусом `PROCESSING` в той же transaction;
 8. запуск goroutine для генерации quiz;
@@ -165,10 +165,10 @@ LLM goroutine выполняет одну автоматическую повт�
 MAX_FIRECRAWL_ATTEMPTS = 2
 FIRECRAWL_TOTAL_TIMEOUT = 30s
 MAX_LLM_ATTEMPTS = 2
-LLM_ATTEMPT_TIMEOUT = 60s
+LLM_ATTEMPT_TIMEOUT = 120s
 ```
 
-После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend хранит безопасный `errorCode`, но не отдаёт frontend сырой ответ провайдера. Если для Resource был куплен overflow slot, его стоимость возвращается в е-баллах ровно один раз в той же transaction, а `purchasedOverflowSlot` сбрасывается в `false`.
+После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend не отдаёт frontend сырой ответ провайдера. Если для Resource был куплен overflow slot, его стоимость возвращается в е-баллах ровно один раз в той же transaction, а `purchasedOverflowSlot` сбрасывается в `false`.
 
 При старте backend переводит оставшиеся после сбоя `PROCESSING` Resources в `FAILED` через тот же failure transition: slot освобождается, а стоимость купленного overflow slot возвращается. Пользователь может повторить только LLM generation обычным `POST /api/resources`.
 
@@ -214,7 +214,7 @@ MAX_TAG_LENGTH = 32
 
 Content короче `MIN_CONTENT_WORDS` отклоняется. Content длиннее `MAX_CONTENT_CHARS` обрезается по последней полной границе paragraph перед лимитом; только сохранённая версия передаётся в LLM и используется как source of truth для evidence.
 
-Title берётся из Firecrawl metadata, затем из первого подходящего heading; последний fallback — hostname. Tags берутся из metadata keywords; если их нет, backend локально выделяет ключевые слова из title, headings и content без дополнительного LLM request. Если подходящих слов нет, используется hostname. Tags приводятся к lowercase, очищаются от дублей и используются для фильтрации Resources.
+Title берётся только из Firecrawl metadata. Если metadata не содержит непустой title, Resource не создаётся. Tags берутся из metadata keywords; если их нет, backend локально выделяет ключевые слова из title, headings и content без дополнительного LLM request. Если подходящих слов нет, используется hostname. Tags приводятся к lowercase, очищаются от дублей и используются для фильтрации Resources.
 
 В MVP не поддерживаются PDF, книги, login pages, CAPTCHA, search results и страницы без достаточного текстового содержимого.
 
@@ -355,7 +355,7 @@ correctAnswerHash = SHA-256(
 )
 ```
 
-Генерируемые IDs и salt используют безопасный алфавит без символа `:`.
+`verificationSalt` использует безопасный алфавит без символа `:`. Entity IDs являются числовыми.
 
 Frontend получает `correctAnswerHash` и `verificationSalt`, вычисляет hash выбранного `selectedIndex` и проверяет ответ локально.
 
@@ -374,7 +374,7 @@ Hash не является защитой от намеренного cheating. 
 После правильного ответа на все вопросы frontend делает один запрос:
 
 ```http
-POST /api/quizzes/:quizId/complete
+POST /api/resources/:id/quiz/complete
 ```
 
 ```json
@@ -430,49 +430,18 @@ XP:
 
 ### Е-баллы
 
-Base reward:
+Reward:
 
 ```text
-baseEPoints = totalQuestions
+ePointsEarned = totalQuestions
 ```
 
-Возраст Resource для rewards считается от `createdAt`. Используется количество полных прошедших 24-часовых периодов.
-
-Дополнительно действует **Old Backlog Bounty**:
-
-| Возраст Resource | Bonus |
-| ---------------- | ----: |
-| < 7 дней         |    +0 |
-| 7–13 дней        |    +1 |
-| 14–29 дней       |    +2 |
-| 30–59 дней       |    +4 |
-| 60+ дней         |    +6 |
-
-Если внутри completion transaction, до перевода завершаемого Resource в `COMPLETED`, используемая capacity была заполнена до обычного лимита, включая Resources в обработке:
-
-```text
-notCompletedResources + processingResources >= activeBacklogLimit
-→ Full Backlog Bonus = +2 е-балла
-```
-
-Итог:
-
-```text
-ePointsEarned =
-  totalQuestions
-  + oldBacklogBonus
-  + fullBacklogBonus
-```
-
-Пример:
-
-```text
-8 вопросов             +8
-Resource лежал 37 дней +4
-Backlog был заполнен   +2
-─────────────────────────
-Итого                 +14 е-баллов
-```
+| Questions | Е-баллы |
+| --------: | ------: |
+|         5 |       5 |
+|         6 |       6 |
+|         8 |       8 |
+|        10 |      10 |
 
 ### Streak
 
@@ -531,7 +500,7 @@ showcaseItemId?: string
 
 ---
 
-## 11. Е-магазин и временный overflow slot
+## 11. Е-магазин
 
 Магазин нужен, чтобы заработок е-баллов имел понятную цель.
 
@@ -628,8 +597,7 @@ Leaderboard не выдаёт дополнительных rewards.
 - список незавершённых Resources;
 - карточка `PROCESSING` Resource с title, tags, кнопкой **Открыть оригинал** и выключенной кнопкой quiz;
 - автоматическое обновление backlog, когда Resource переходит в `NOT_COMPLETED`;
-- карточка `FAILED` Resource с безопасной причиной ошибки, **Открыть оригинал** и **Повторить**;
-- Old Backlog Bounty на старых материалах;
+- карточка `FAILED` Resource с общим сообщением об ошибке, **Открыть оригинал** и **Повторить**;
 - Add Resource.
 
 ### Resource
@@ -638,7 +606,6 @@ Leaderboard не выдаёт дополнительных rewards.
 - tags;
 - processing/error state;
 - количество вопросов;
-- bounty;
 - **Открыть оригинал** доступно в любом статусе;
 - **Начать quiz** доступно только при `NOT_COMPLETED`.
 
@@ -658,10 +625,7 @@ Quiz выполнен
 8 / 8 правильно
 
 +60 XP
-+14 е-баллов
-  +8 за вопросы
-  +4 old backlog bounty
-  +2 full backlog bonus
++8 е-баллов
 
 🔥 Streak: 4 дня
 
@@ -687,6 +651,8 @@ All-time Top 20 по XP.
 ---
 
 ## 14. Минимальная модель данных
+
+Все entity IDs являются целыми числами: в Go используется `int64`, в JSON — number.
 
 ### User
 
@@ -729,39 +695,33 @@ type UserProgress = {
 
 ```ts
 type Resource = {
-  id: string;
+  id: number;
   userId: number;
   url: string;
   title: string;
   tags: string[];
   content: string;
   status: ResourceStatus;
-  errorCode?: string;
   purchasedOverflowSlot: boolean;
   createdAt: Date;
   completedAt?: Date;
   xpEarned?: number;
   ePointsEarned?: number;
-  oldBacklogBonus?: number;
-  fullBacklogBonus?: number;
 };
 ```
 
-Resource создаётся только после успешного Firecrawl request, поэтому `title`, `tags` и `content` доступны уже в `PROCESSING`. При переходе в `FAILED` устанавливается безопасный `errorCode`; retry очищает его. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
+Resource создаётся только после успешного Firecrawl request, поэтому `title`, `tags` и `content` доступны уже в `PROCESSING`. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
 
 ### Quiz
 
 ```ts
 type Quiz = {
-  id: string;
-  resourceId: string;
+  id: number;
+  resourceId: number;
   title: string;
   questions: Question[];
-  createdAt: Date;
 };
 ```
-
-`totalQuestions` вычисляется как `questions.length`; отдельное поле не хранится. Порядок вопросов соответствует порядку элементов JSON-массива.
 
 ### Question
 
@@ -776,10 +736,6 @@ type Question = {
   correctAnswerHash: string;
 };
 ```
-
-Отдельные `QuizAttempt` и `QuizAnswer` на backend для MVP не нужны.
-
-`level`, `activeBacklogLimit`, `ownedCosmeticIds` и `tags` в API являются computed representations, а не отдельными изменяемыми источниками истины.
 
 Обязательные database invariants:
 
@@ -807,7 +763,7 @@ POST   /api/resources
 GET    /api/resources?status={optionalStatus}&tag={optionalTag}
 GET    /api/resources/:id
 GET    /api/resources/:id/quiz
-POST   /api/quizzes/:quizId/complete
+POST   /api/resources/:id/quiz/complete
 
 GET    /api/profile
 PATCH  /api/profile/cosmetics
@@ -835,7 +791,7 @@ HTTP/1.1 202 Accepted
 
 ```json
 {
-  "resourceId": "res_123",
+  "resourceId": 123,
   "status": "PROCESSING",
   "title": "Understanding Go Concurrency",
   "tags": ["go", "concurrency", "goroutines"]
@@ -962,8 +918,6 @@ XP → all-time Leaderboard
 
 е-баллы → Cosmetics → Profile → видны в Leaderboard
 е-баллы → покупка временного overflow slot при добавлении Resource
-
-старый Resource → дополнительный bounty → больше мотивации его завершить
 ```
 
 **Главный критерий:** core learning loop должен работать независимо от Shop и Leaderboard. Геймификация должна усиливать completion, но не усложнять прохождение quiz.

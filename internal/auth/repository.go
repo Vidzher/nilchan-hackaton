@@ -1,33 +1,34 @@
 package auth
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"nilchan-hackaton/internal/shared/models/users"
+
 	"nilchan-hackaton/internal/storage"
-	"strings"
+	"nilchan-hackaton/internal/user"
 
 	"github.com/mattn/go-sqlite3"
 )
 
-type AuthRepository struct {
+type repository struct {
 	storage *storage.Storage
 }
 
-func NewAuthRepository(storage *storage.Storage) *AuthRepository {
-	return &AuthRepository{storage: storage}
+func NewRepository(storage *storage.Storage) *repository {
+	return &repository{storage: storage}
 }
 
-func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.User, error) {
-	tx, err := ar.storage.DB.Begin()
+func (ar *repository) create(ctx context.Context, email, username, passwordHash string) (*user.User, error) {
+	tx, err := ar.storage.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin user creation: %w", err)
 	}
 	defer tx.Rollback()
 
-	var created users.User
-	err = tx.QueryRow(`
+	var created user.User
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO users(email, username, password_hash)
 		VALUES(?, ?, ?)
 		RETURNING id, email, username, password_hash, created_at
@@ -41,26 +42,22 @@ func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.U
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			switch {
-			case strings.Contains(err.Error(), "users.email"):
-				return nil, ErrEmailTaken
-			case strings.Contains(err.Error(), "users.username"):
-				return nil, ErrUsernameTaken
-			}
+			return nil, ErrUserAlreadyExists
 		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	if _, err := tx.Exec("INSERT INTO user_progress(user_id) VALUES(?)", created.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO user_progress(user_id) VALUES(?)", created.ID); err != nil {
 		return nil, fmt.Errorf("create user progress: %w", err)
 	}
 
-	if _, err := tx.Exec(
+	if _, err := tx.ExecContext(
+		ctx,
 		"INSERT INTO user_cosmetics(user_id, item_id) VALUES(?, ?), (?, ?)",
 		created.ID,
-		users.DefaultAvatarID,
+		user.DefaultAvatarID,
 		created.ID,
-		users.DefaultFrameID,
+		user.DefaultFrameID,
 	); err != nil {
 		return nil, fmt.Errorf("grant default cosmetics: %w", err)
 	}
@@ -71,9 +68,9 @@ func (ar *AuthRepository) Create(email, username, passwordHash string) (*users.U
 	return &created, nil
 }
 
-func (ar *AuthRepository) FindOne(email string) (*users.User, error) {
-	var found users.User
-	err := ar.storage.DB.QueryRow(`
+func (ar *repository) findOne(ctx context.Context, email string) (*user.User, error) {
+	var found user.User
+	err := ar.storage.DB.QueryRowContext(ctx, `
 		SELECT id, email, username, password_hash, created_at
 		FROM users
 		WHERE email = ?

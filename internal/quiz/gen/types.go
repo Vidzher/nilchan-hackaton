@@ -10,9 +10,9 @@ type GeneratedQuiz struct {
 }
 
 type GeneratedQuestion struct {
-	Text         string    `json:"text"`
-	Options      [4]string `json:"options"`
-	CorrectIndex int       `json:"correctIndex"`
-	Explanation  string    `json:"explanation"`
-	Evidence     string    `json:"evidence"`
+	Text         string   `json:"text"`
+	Options      []string `json:"options"`
+	CorrectIndex int      `json:"correctIndex"`
+	Explanation  string   `json:"explanation"`
+	Evidence     string   `json:"evidence"`
 }

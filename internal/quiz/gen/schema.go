@@ -1,6 +1,11 @@
 package gen
 
-const generationSchemaName = "learning_backlog_quiz"
+type ResponseSchema struct {
+	Name   string
+	Schema map[string]any
+}
+
+const generationSchemaName = "quiz_generation"
 
 const generationSchemaJSON = `{
   "type": "object",
@@ -24,7 +29,8 @@ const generationSchemaJSON = `{
         "properties": {
           "text": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Question testing understanding of the source material"
           },
           "options": {
             "type": "array",
@@ -34,20 +40,24 @@ const generationSchemaJSON = `{
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Exactly four unique answer options"
           },
           "correctIndex": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 3
+            "maximum": 3,
+            "description": "Zero-based index of the only correct option"
           },
           "explanation": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Short explanation of why the answer is correct"
           },
           "evidence": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Exact excerpt from SOURCE supporting the correct answer"
           }
         }
       }

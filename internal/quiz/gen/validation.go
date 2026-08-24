@@ -25,6 +25,9 @@ func validateGeneratedQuiz(response GeneratedQuiz, sourceText string) error {
 		}
 		seenQuestions[normalizedQuestion] = struct{}{}
 
+		if len(question.Options) != 4 {
+			return invalidQuizError(fmt.Sprintf("question %d must have 4 options", questionIndex+1))
+		}
 		if question.CorrectIndex < 0 || question.CorrectIndex >= len(question.Options) {
 			return invalidQuizError(fmt.Sprintf("question %d has an invalid correctIndex", questionIndex+1))
 		}

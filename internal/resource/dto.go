@@ -1,10 +1,10 @@
-package transport_http_resource
+package resource
 
 import "time"
 
 type ResourceDTOResponse struct {
-	ID                    int        `json:"id"`
-	UserID                int        `json:"userId"`
+	ID                    int64      `json:"id"`
+	UserID                int64      `json:"userId"`
 	URL                   string     `json:"url"`
 	Title                 string     `json:"title"`
 	Tags                  []string   `json:"tags"`
@@ -12,8 +12,8 @@ type ResourceDTOResponse struct {
 	PurchasedOverflowSlot bool       `json:"purchasedOverflowSlot"`
 	CreatedAt             time.Time  `json:"createdAt"`
 	CompletedAt           *time.Time `json:"completedAt,omitempty"`
-	XPEarned              int        `json:"xpEarned"`
-	EPointsEarned         int        `json:"EPointEarned"`
+	XPEarned              *int       `json:"xpEarned,omitempty"`
+	EPointsEarned         *int       `json:"ePointsEarned,omitempty"`
 }
 
 type CreateResourceRequest struct {

@@ -1,8 +1,8 @@
 package quiz
 
 type GetQuizResponse struct {
-	ID         int               `json:"id"`
-	ResourceID int               `json:"resourceId"`
+	ID         int64             `json:"id"`
+	ResourceID int64             `json:"resourceId"`
 	Title      string            `json:"title"`
 	Questions  []QuizQuestionDTO `json:"questions"`
 }

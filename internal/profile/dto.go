@@ -1,4 +1,4 @@
-package transport_http_profile
+package profile
 
 import "time"
 

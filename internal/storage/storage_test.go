@@ -42,7 +42,7 @@ func TestNewStorageConfiguresSQLiteAndAppliesSchema(t *testing.T) {
 		INSERT INTO resources (
 			id, user_id, url, title, content, status, created_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, "resource-1", 999, "https://example.com", "Title", "content", "PROCESSING", "2026-01-01T00:00:00Z")
+	`, int64(1), int64(999), "https://example.com", "Title", "content", "PROCESSING", "2026-01-01T00:00:00Z")
 	if err == nil {
 		t.Fatal("inserting a resource for a missing user succeeded")
 	}

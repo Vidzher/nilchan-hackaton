@@ -1,8 +1,6 @@
-package domain
+package resource
 
-import (
-	"time"
-)
+import "time"
 
 type Status string
 
@@ -28,14 +26,24 @@ type Resource struct {
 	EPointsEarned         *int
 }
 
-type CreateResourceInput struct {
-	UserID               int64
-	URL                  string
-	PurchaseOverflowSlot bool
+func (s Status) Valid() bool {
+	switch s {
+	case StatusProcessing, StatusFailed, StatusNotCompleted, StatusCompleted:
+		return true
+	default:
+		return false
+	}
 }
 
-type ListResourcesInput struct {
-	UserID int64
-	Status *Status
-	Tag    *string
+func (s Status) CanTransitionTo(next Status) bool {
+	switch s {
+	case StatusProcessing:
+		return next == StatusNotCompleted || next == StatusFailed
+	case StatusFailed:
+		return next == StatusProcessing
+	case StatusNotCompleted:
+		return next == StatusCompleted
+	default:
+		return false
+	}
 }

@@ -1,8 +1,8 @@
 package quiz
 
 type Quiz struct {
-	ID         int
-	ResourceID int
+	ID         int64
+	ResourceID int64
 	Title      string
 	Questions  []Question
 }

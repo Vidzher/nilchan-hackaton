@@ -128,7 +128,7 @@ Backend выполняет:
 2. предварительный duplicate и capacity check;
 3. синхронное получение content через Firecrawl;
 4. content validation;
-5. получение title и tags из Firecrawl metadata или локально из content;
+5. получение title из Firecrawl metadata и tags из metadata keywords или локально из content;
 6. повторный duplicate и capacity check в database transaction;
 7. при необходимости списание стоимости временного overflow slot и создание Resource со статусом `PROCESSING` в той же transaction;
 8. запуск goroutine для генерации quiz;
@@ -148,12 +148,12 @@ Frontend опрашивает `GET /api/resources/:id`. Пока Resource нах
 
 Для `(userId, url)` действует database unique constraint. В `url` хранится нормализованный URL. Повторный `POST /api/resources` обрабатывается так:
 
-| Текущий статус | Поведение |
-| -------------- | --------- |
-| `PROCESSING` | вернуть существующий Resource с `202`, новую goroutine не запускать |
-| `NOT_COMPLETED` | вернуть duplicate error |
-| `COMPLETED` | вернуть duplicate error |
-| `FAILED` | повторно проверить capacity и при необходимости заново купить overflow slot, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
+| Текущий статус  | Поведение                                                                                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROCESSING`    | вернуть существующий Resource с `202`, новую goroutine не запускать                                                                                                                         |
+| `NOT_COMPLETED` | вернуть duplicate error                                                                                                                                                                     |
+| `COMPLETED`     | вернуть duplicate error                                                                                                                                                                     |
+| `FAILED`        | повторно проверить capacity и при необходимости заново купить overflow slot, использовать сохранённый content, атомарно перевести Resource в `PROCESSING` и повторить только LLM generation |
 
 Одновременные retry используют условный переход `FAILED → PROCESSING`, поэтому обработку сможет запустить только один запрос.
 
@@ -165,10 +165,10 @@ LLM goroutine выполняет одну автоматическую повт�
 MAX_FIRECRAWL_ATTEMPTS = 2
 FIRECRAWL_TOTAL_TIMEOUT = 30s
 MAX_LLM_ATTEMPTS = 2
-LLM_ATTEMPT_TIMEOUT = 60s
+LLM_ATTEMPT_TIMEOUT = 120s
 ```
 
-После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend хранит безопасный `errorCode`, но не отдаёт frontend сырой ответ провайдера. Если для Resource был куплен overflow slot, его стоимость возвращается в е-баллах ровно один раз в той же transaction, а `purchasedOverflowSlot` сбрасывается в `false`.
+После последней LLM ошибки Resource переходит в `FAILED` и освобождает slot. Backend не отдаёт frontend сырой ответ провайдера. Если для Resource был куплен overflow slot, его стоимость возвращается в е-баллах ровно один раз в той же transaction, а `purchasedOverflowSlot` сбрасывается в `false`.
 
 При старте backend переводит оставшиеся после сбоя `PROCESSING` Resources в `FAILED` через тот же failure transition: slot освобождается, а стоимость купленного overflow slot возвращается. Пользователь может повторить только LLM generation обычным `POST /api/resources`.
 
@@ -214,7 +214,7 @@ MAX_TAG_LENGTH = 32
 
 Content короче `MIN_CONTENT_WORDS` отклоняется. Content длиннее `MAX_CONTENT_CHARS` обрезается по последней полной границе paragraph перед лимитом; только сохранённая версия передаётся в LLM и используется как source of truth для evidence.
 
-Title берётся из Firecrawl metadata, затем из первого подходящего heading; последний fallback — hostname. Tags берутся из metadata keywords; если их нет, backend локально выделяет ключевые слова из title, headings и content без дополнительного LLM request. Если подходящих слов нет, используется hostname. Tags приводятся к lowercase, очищаются от дублей и используются для фильтрации Resources.
+Title берётся только из Firecrawl metadata. Если metadata не содержит непустой title, Resource не создаётся. Tags берутся из metadata keywords; если их нет, backend локально выделяет ключевые слова из title, headings и content без дополнительного LLM request. Если подходящих слов нет, используется hostname. Tags приводятся к lowercase, очищаются от дублей и используются для фильтрации Resources.
 
 В MVP не поддерживаются PDF, книги, login pages, CAPTCHA, search results и страницы без достаточного текстового содержимого.
 
@@ -247,6 +247,100 @@ Backend отклоняет весь сгенерированный quiz, есл�
 
 Источник считается **untrusted content**. LLM не должна выполнять инструкции, найденные внутри страницы, и должна использовать только информацию из SOURCE.
 
+LLM возвращает только объект с массивом `questions`. `Quiz.id`, `Quiz.title`, `verificationSalt` и `correctAnswerHash` не генерируются LLM: title копируется из сохранённого Resource, остальные значения создаются backend после валидации ответа.
+
+OpenRouter вызывается со следующим structured output contract:
+
+```json
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "quiz_generation",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["questions"],
+      "properties": {
+        "questions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "options",
+              "correctIndex",
+              "explanation",
+              "evidence"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Question testing understanding of the source material"
+              },
+              "options": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Exactly four unique answer options"
+              },
+              "correctIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3,
+                "description": "Zero-based index of the only correct option"
+              },
+              "explanation": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Short explanation of why the answer is correct"
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact excerpt from SOURCE supporting the correct answer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Сокращённый фрагмент ответа LLM; полный ответ обязан содержать 5–10 вопросов:
+
+```json
+{
+  "questions": [
+    {
+      "text": "Why are goroutines considered lightweight compared with operating-system threads?",
+      "options": [
+        "They use dynamically growing stacks managed by the Go runtime",
+        "They always execute without operating-system threads",
+        "They cannot perform blocking operations",
+        "They share a single fixed-size stack"
+      ],
+      "correctIndex": 0,
+      "explanation": "Goroutine stacks start small and grow when necessary, reducing their initial memory cost.",
+      "evidence": "Goroutines have dynamically growing stacks that begin with a small amount of memory."
+    }
+  ]
+}
+```
+
+JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов, диапазон `correctIndex`, а также точное присутствие нормализованного `evidence` в сохранённом `Resource.content`. Любое нарушение отклоняет весь quiz и считается quiz validation error.
+
 ---
 
 ## 7. Client-side проверка ответов
@@ -261,7 +355,7 @@ correctAnswerHash = SHA-256(
 )
 ```
 
-Генерируемые IDs и salt используют безопасный алфавит без символа `:`.
+`verificationSalt` использует безопасный алфавит без символа `:`. Entity IDs являются числовыми.
 
 Frontend получает `correctAnswerHash` и `verificationSalt`, вычисляет hash выбранного `selectedIndex` и проверяет ответ локально.
 
@@ -280,7 +374,7 @@ Hash не является защитой от намеренного cheating. 
 После правильного ответа на все вопросы frontend делает один запрос:
 
 ```http
-POST /api/quizzes/:quizId/complete
+POST /api/resources/:id/quiz/complete
 ```
 
 ```json
@@ -336,49 +430,18 @@ XP:
 
 ### Е-баллы
 
-Base reward:
+Reward:
 
 ```text
-baseEPoints = totalQuestions
+ePointsEarned = totalQuestions
 ```
 
-Возраст Resource для rewards считается от `createdAt`. Используется количество полных прошедших 24-часовых периодов.
-
-Дополнительно действует **Old Backlog Bounty**:
-
-| Возраст Resource | Bonus |
-| ---------------- | ----: |
-| < 7 дней         |    +0 |
-| 7–13 дней        |    +1 |
-| 14–29 дней       |    +2 |
-| 30–59 дней       |    +4 |
-| 60+ дней         |    +6 |
-
-Если внутри completion transaction, до перевода завершаемого Resource в `COMPLETED`, используемая capacity была заполнена до обычного лимита, включая Resources в обработке:
-
-```text
-notCompletedResources + processingResources >= activeBacklogLimit
-→ Full Backlog Bonus = +2 е-балла
-```
-
-Итог:
-
-```text
-ePointsEarned =
-  totalQuestions
-  + oldBacklogBonus
-  + fullBacklogBonus
-```
-
-Пример:
-
-```text
-8 вопросов             +8
-Resource лежал 37 дней +4
-Backlog был заполнен   +2
-─────────────────────────
-Итого                 +14 е-баллов
-```
+| Questions | Е-баллы |
+| --------: | ------: |
+|         5 |       5 |
+|         6 |       6 |
+|         8 |       8 |
+|        10 |      10 |
 
 ### Streak
 
@@ -437,7 +500,7 @@ showcaseItemId?: string
 
 ---
 
-## 11. Е-магазин и временный overflow slot
+## 11. Е-магазин
 
 Магазин нужен, чтобы заработок е-баллов имел понятную цель.
 
@@ -534,8 +597,7 @@ Leaderboard не выдаёт дополнительных rewards.
 - список незавершённых Resources;
 - карточка `PROCESSING` Resource с title, tags, кнопкой **Открыть оригинал** и выключенной кнопкой quiz;
 - автоматическое обновление backlog, когда Resource переходит в `NOT_COMPLETED`;
-- карточка `FAILED` Resource с безопасной причиной ошибки, **Открыть оригинал** и **Повторить**;
-- Old Backlog Bounty на старых материалах;
+- карточка `FAILED` Resource с общим сообщением об ошибке, **Открыть оригинал** и **Повторить**;
 - Add Resource.
 
 ### Resource
@@ -544,7 +606,6 @@ Leaderboard не выдаёт дополнительных rewards.
 - tags;
 - processing/error state;
 - количество вопросов;
-- bounty;
 - **Открыть оригинал** доступно в любом статусе;
 - **Начать quiz** доступно только при `NOT_COMPLETED`.
 
@@ -564,10 +625,7 @@ Quiz выполнен
 8 / 8 правильно
 
 +60 XP
-+14 е-баллов
-  +8 за вопросы
-  +4 old backlog bounty
-  +2 full backlog bonus
++8 е-баллов
 
 🔥 Streak: 4 дня
 
@@ -593,6 +651,8 @@ All-time Top 20 по XP.
 ---
 
 ## 14. Минимальная модель данных
+
+Все entity IDs являются целыми числами: в Go используется `int64`, в JSON — number.
 
 ### User
 
@@ -635,39 +695,33 @@ type UserProgress = {
 
 ```ts
 type Resource = {
-  id: string;
+  id: number;
   userId: number;
   url: string;
   title: string;
   tags: string[];
   content: string;
   status: ResourceStatus;
-  errorCode?: string;
   purchasedOverflowSlot: boolean;
   createdAt: Date;
   completedAt?: Date;
   xpEarned?: number;
   ePointsEarned?: number;
-  oldBacklogBonus?: number;
-  fullBacklogBonus?: number;
 };
 ```
 
-Resource создаётся только после успешного Firecrawl request, поэтому `title`, `tags` и `content` доступны уже в `PROCESSING`. При переходе в `FAILED` устанавливается безопасный `errorCode`; retry очищает его. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
+Resource создаётся только после успешного Firecrawl request, поэтому `title`, `tags` и `content` доступны уже в `PROCESSING`. Повторное добавление URL со статусом `FAILED` использует сохранённый content и перезапускает только quiz generation.
 
 ### Quiz
 
 ```ts
 type Quiz = {
-  id: string;
-  resourceId: string;
+  id: number;
+  resourceId: number;
   title: string;
   questions: Question[];
-  createdAt: Date;
 };
 ```
-
-`totalQuestions` вычисляется как `questions.length`; отдельное поле не хранится. Порядок вопросов соответствует порядку элементов JSON-массива.
 
 ### Question
 
@@ -682,10 +736,6 @@ type Question = {
   correctAnswerHash: string;
 };
 ```
-
-Отдельные `QuizAttempt` и `QuizAnswer` на backend для MVP не нужны.
-
-`level`, `activeBacklogLimit`, `ownedCosmeticIds` и `tags` в API являются computed representations, а не отдельными изменяемыми источниками истины.
 
 Обязательные database invariants:
 
@@ -713,7 +763,7 @@ POST   /api/resources
 GET    /api/resources?status={optionalStatus}&tag={optionalTag}
 GET    /api/resources/:id
 GET    /api/resources/:id/quiz
-POST   /api/quizzes/:quizId/complete
+POST   /api/resources/:id/quiz/complete
 
 GET    /api/profile
 PATCH  /api/profile/cosmetics
@@ -741,7 +791,7 @@ HTTP/1.1 202 Accepted
 
 ```json
 {
-  "resourceId": "res_123",
+  "resourceId": 123,
   "status": "PROCESSING",
   "title": "Understanding Go Concurrency",
   "tags": ["go", "concurrency", "goroutines"]
@@ -765,15 +815,15 @@ API errors используют HTTP status и человекочитаемое 
 
 Основные HTTP statuses:
 
-| HTTP | Когда |
-| ---: | ----- |
-| 400 | невалидный request или URL |
-| 401 | отсутствует или невалиден JWT, либо неверны credentials |
-| 404 | entity не существует или принадлежит другому user |
-| 409 | конфликт состояния, duplicate email/username/resource, заполненный backlog или недостаточно е-баллов |
-| 422 | request валиден, но content или answers не могут быть приняты |
-| 502 | Firecrawl завершился ошибкой |
-| 504 | общий Firecrawl timeout исчерпан |
+| HTTP | Когда                                                                                                |
+| ---: | ---------------------------------------------------------------------------------------------------- |
+|  400 | невалидный request или URL                                                                           |
+|  401 | отсутствует или невалиден JWT, либо неверны credentials                                              |
+|  404 | entity не существует или принадлежит другому user                                                    |
+|  409 | конфликт состояния, duplicate email/username/resource, заполненный backlog или недостаточно е-баллов |
+|  422 | request валиден, но content или answers не могут быть приняты                                        |
+|  502 | Firecrawl завершился ошибкой                                                                         |
+|  504 | общий Firecrawl timeout исчерпан                                                                     |
 
 Auth middleware для отсутствующего или невалидного JWT возвращает plain-text сообщение с HTTP `401`; login/register handlers используют JSON envelope выше.
 
@@ -868,8 +918,6 @@ XP → all-time Leaderboard
 
 е-баллы → Cosmetics → Profile → видны в Leaderboard
 е-баллы → покупка временного overflow slot при добавлении Resource
-
-старый Resource → дополнительный bounty → больше мотивации его завершить
 ```
 
 **Главный критерий:** core learning loop должен работать независимо от Shop и Leaderboard. Геймификация должна усиливать completion, но не усложнять прохождение quiz.

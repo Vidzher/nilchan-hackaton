@@ -1,14 +1,10 @@
-package domain
+package profile
 
-import "time"
+import (
+	"time"
 
-type User struct {
-	ID           int64
-	Email        string
-	Username     string
-	PasswordHash string
-	CreatedAt    time.Time
-}
+	"nilchan-hackaton/internal/user"
+)
 
 type UserProgress struct {
 	UserID           int64
@@ -28,7 +24,7 @@ type UserCosmetic struct {
 }
 
 type Profile struct {
-	User      User
+	User      user.User
 	Progress  UserProgress
 	Cosmetics []UserCosmetic
 }

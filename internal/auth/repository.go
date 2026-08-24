@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,15 +20,15 @@ func NewRepository(storage *storage.Storage) *repository {
 	return &repository{storage: storage}
 }
 
-func (ar *repository) create(email, username, passwordHash string) (*user.User, error) {
-	tx, err := ar.storage.DB.Begin()
+func (ar *repository) create(ctx context.Context, email, username, passwordHash string) (*user.User, error) {
+	tx, err := ar.storage.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin user creation: %w", err)
 	}
 	defer tx.Rollback()
 
 	var created user.User
-	err = tx.QueryRow(`
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO users(email, username, password_hash)
 		VALUES(?, ?, ?)
 		RETURNING id, email, username, password_hash, created_at
@@ -46,11 +47,12 @@ func (ar *repository) create(email, username, passwordHash string) (*user.User, 
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	if _, err := tx.Exec("INSERT INTO user_progress(user_id) VALUES(?)", created.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO user_progress(user_id) VALUES(?)", created.ID); err != nil {
 		return nil, fmt.Errorf("create user progress: %w", err)
 	}
 
-	if _, err := tx.Exec(
+	if _, err := tx.ExecContext(
+		ctx,
 		"INSERT INTO user_cosmetics(user_id, item_id) VALUES(?, ?), (?, ?)",
 		created.ID,
 		user.DefaultAvatarID,
@@ -66,9 +68,9 @@ func (ar *repository) create(email, username, passwordHash string) (*user.User, 
 	return &created, nil
 }
 
-func (ar *repository) findOne(email string) (*user.User, error) {
+func (ar *repository) findOne(ctx context.Context, email string) (*user.User, error) {
 	var found user.User
-	err := ar.storage.DB.QueryRow(`
+	err := ar.storage.DB.QueryRowContext(ctx, `
 		SELECT id, email, username, password_hash, created_at
 		FROM users
 		WHERE email = ?

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -13,8 +14,8 @@ import (
 )
 
 type service interface {
-	Login(email, password string) (*Result, error)
-	Register(email, username, password string) (*Result, error)
+	Login(ctx context.Context, email, password string) (*Result, error)
+	Register(ctx context.Context, email, username, password string) (*Result, error)
 }
 
 type Handler struct {
@@ -33,7 +34,7 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 			return
 		}
 
-		result, err := h.service.Login(req.Email, req.Password)
+		result, err := h.service.Login(r.Context(), req.Email, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
 				renderError(w, r, http.StatusUnauthorized, "invalid credentials")
@@ -56,7 +57,7 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 			return
 		}
 
-		result, err := h.service.Register(req.Email, req.Username, req.Password)
+		result, err := h.service.Register(r.Context(), req.Email, req.Username, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrUserAlreadyExists) {
 				renderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())

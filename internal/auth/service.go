@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 
 	pwd "nilchan-hackaton/internal/auth/password"
@@ -9,8 +10,8 @@ import (
 )
 
 type userRepository interface {
-	create(email, username, passwordHash string) (*user.User, error)
-	findOne(email string) (*user.User, error)
+	create(ctx context.Context, email, username, passwordHash string) (*user.User, error)
+	findOne(ctx context.Context, email string) (*user.User, error)
 }
 
 type Service struct {
@@ -26,8 +27,8 @@ func NewService(repo userRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (as *Service) Login(email string, password string) (*Result, error) {
-	res, err := as.repo.findOne(email)
+func (as *Service) Login(ctx context.Context, email string, password string) (*Result, error) {
+	res, err := as.repo.findOne(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +45,13 @@ func (as *Service) Login(email string, password string) (*Result, error) {
 	return &Result{Token: accessToken, User: res}, nil
 }
 
-func (as *Service) Register(email, username, password string) (*Result, error) {
+func (as *Service) Register(ctx context.Context, email, username, password string) (*Result, error) {
 	pwdHash, err := pwd.Hash(password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user, err := as.repo.create(email, username, pwdHash)
+	user, err := as.repo.create(ctx, email, username, pwdHash)
 	if err != nil {
 		return nil, err
 	}

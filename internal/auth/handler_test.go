@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -18,11 +19,11 @@ type stubAuthService struct {
 	registerErr    error
 }
 
-func (s stubAuthService) Login(_, _ string) (*Result, error) {
+func (s stubAuthService) Login(_ context.Context, _, _ string) (*Result, error) {
 	return s.loginResult, s.loginErr
 }
 
-func (s stubAuthService) Register(_, _, _ string) (*Result, error) {
+func (s stubAuthService) Register(_ context.Context, _, _, _ string) (*Result, error) {
 	return s.registerResult, s.registerErr
 }
 

@@ -17,21 +17,32 @@ type FirecrawlClient struct {
 	client  *http.Client
 }
 
+type Page struct {
+	Title   string
+	Content string
+	Tags    []string
+}
+
 type scrapeRequest struct {
-	URL     string   `json:"url"`
-	Formats []string `json:"formats"`
+	URL             string   `json:"url"`
+	Formats         []string `json:"formats"`
+	OnlyMainContent bool     `json:"onlyMainContent"`
 }
 
 type scrapeResponse struct {
-	Success bool `json:"success"`
-	Data    struct {
-		Markdown string `json:"markdown"`
-		Metadata struct {
-			Title    string `json:"title"`
-			Keywords string `json:"keywords"`
-		} `json:"metadata"`
-	} `json:"data"`
-	Error string `json:"error"`
+	Success bool       `json:"success"`
+	Data    scrapeData `json:"data"`
+	Error   string     `json:"error"`
+}
+
+type scrapeData struct {
+	Markdown string         `json:"markdown"`
+	Metadata scrapeMetadata `json:"metadata"`
+}
+
+type scrapeMetadata struct {
+	Title    string `json:"title"`
+	Keywords string `json:"keywords"`
 }
 
 func NewFirecrawlClient(apiKey, baseURL string, client *http.Client) (*FirecrawlClient, error) {
@@ -48,7 +59,11 @@ func NewFirecrawlClient(apiKey, baseURL string, client *http.Client) (*Firecrawl
 }
 
 func (fc *FirecrawlClient) ParsePage(ctx context.Context, pageURL string) (Page, error) {
-	body, err := json.Marshal(scrapeRequest{URL: pageURL, Formats: []string{"markdown"}})
+	body, err := json.Marshal(scrapeRequest{
+		URL:             pageURL,
+		Formats:         []string{"markdown"},
+		OnlyMainContent: true,
+	})
 	if err != nil {
 		return Page{}, fmt.Errorf("marshal firecrawl request: %w", err)
 	}
@@ -89,9 +104,20 @@ func (fc *FirecrawlClient) ParsePage(ctx context.Context, pageURL string) (Page,
 		return Page{}, fmt.Errorf("firecrawl scrape failed: %s", result.Error)
 	}
 
-	return Page{
-		Content:  result.Data.Markdown,
-		Title:    result.Data.Metadata.Title,
-		Keywords: result.Data.Metadata.Keywords,
-	}, nil
+	page := Page{
+		Title:   strings.TrimSpace(result.Data.Metadata.Title),
+		Content: strings.TrimSpace(result.Data.Markdown),
+		Tags:    extractTags(pageURL, result.Data.Metadata.Keywords),
+	}
+	if page.Title == "" {
+		return Page{}, fmt.Errorf("invalid extracted page: title is empty")
+	}
+	if page.Content == "" {
+		return Page{}, fmt.Errorf("invalid extracted page: content is empty")
+	}
+	if len(page.Tags) == 0 {
+		return Page{}, fmt.Errorf("invalid extracted page: tags are empty")
+	}
+
+	return page, nil
 }

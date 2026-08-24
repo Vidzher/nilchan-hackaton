@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"nilchan-hackaton/internal/llm"
@@ -13,6 +14,7 @@ import (
 const (
 	maxSourceChars     = 50_000
 	generationAttempts = 2
+	generationTimeout  = 120 * time.Second
 )
 
 type completer interface {
@@ -58,7 +60,9 @@ func (g *Generator) Generate(ctx context.Context, request GenerationRequest) (*G
 	var lastErr error
 
 	for range generationAttempts {
-		rawResponse, err := g.client.Complete(ctx, completionRequest)
+		generationCtx, cancel := context.WithTimeout(ctx, generationTimeout)
+		rawResponse, err := g.client.Complete(generationCtx, completionRequest)
+		cancel()
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrGenerationFailed, err)
 		}

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFirecrawlClientParsePageReturnsMetadata(t *testing.T) {
+func TestFirecrawlClientParsePageReturnsValidatedPage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Errorf("Authorization = %q, want %q", got, "Bearer test-key")
@@ -24,6 +24,9 @@ func TestFirecrawlClientParsePageReturnsMetadata(t *testing.T) {
 		if len(request.Formats) != 1 || request.Formats[0] != "markdown" {
 			t.Errorf("Formats = %v, want [markdown]", request.Formats)
 		}
+		if !request.OnlyMainContent {
+			t.Error("OnlyMainContent = false, want true")
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -32,7 +35,7 @@ func TestFirecrawlClientParsePageReturnsMetadata(t *testing.T) {
 				"markdown": "article content",
 				"metadata": {
 					"title": "Article title",
-					"keywords": "go,concurrency"
+					"keywords": "Go, Concurrency"
 				}
 			}
 		}`))
@@ -54,7 +57,7 @@ func TestFirecrawlClientParsePageReturnsMetadata(t *testing.T) {
 	if page.Title != "Article title" {
 		t.Errorf("Title = %q, want Article title", page.Title)
 	}
-	if page.Keywords != "go,concurrency" {
-		t.Errorf("Keywords = %q, want go,concurrency", page.Keywords)
+	if len(page.Tags) != 2 || page.Tags[0] != "go" || page.Tags[1] != "concurrency" {
+		t.Errorf("Tags = %v, want [go concurrency]", page.Tags)
 	}
 }

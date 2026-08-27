@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"nilchan-hackaton/internal/cosmetics"
 	"nilchan-hackaton/internal/storage"
 	"nilchan-hackaton/internal/user"
 
@@ -55,9 +56,9 @@ func (ar *repository) create(ctx context.Context, email, username, passwordHash 
 		ctx,
 		"INSERT INTO user_cosmetics(user_id, item_id) VALUES(?, ?), (?, ?)",
 		created.ID,
-		user.DefaultAvatarID,
+		cosmetics.DefaultAvatarID,
 		created.ID,
-		user.DefaultFrameID,
+		cosmetics.DefaultFrameID,
 	); err != nil {
 		return nil, fmt.Errorf("grant default cosmetics: %w", err)
 	}

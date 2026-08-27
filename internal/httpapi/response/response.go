@@ -1,4 +1,10 @@
-package response
+package httpapi_response
+
+import (
+	"net/http"
+
+	"github.com/go-chi/render"
+)
 
 type SuccessResponse struct {
 	Status string `json:"status"`
@@ -27,4 +33,14 @@ func Error(msg string) ErrorResponse {
 		Status: StatusError,
 		Error:  msg,
 	}
+}
+
+func RenderError(w http.ResponseWriter, r *http.Request, status int, message string) {
+	render.Status(r, status)
+	render.JSON(w, r, Error(message))
+}
+
+func RenderJSON(w http.ResponseWriter, r *http.Request, status int, body any) {
+	render.Status(r, status)
+	render.JSON(w, r, body)
 }

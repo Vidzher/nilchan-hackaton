@@ -8,6 +8,7 @@ import (
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/httpapi/validation"
+	"nilchan-hackaton/internal/profile"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -48,7 +49,11 @@ func New(cfg *config.Config) (*App, error) {
 	authService := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authService, validate)
 
-	a.registerRoutes(authHandler)
+	profileRepo := profile.NewRepository(store)
+	profileService := profile.NewService(profileRepo)
+	profileHandler := profile.NewHandler(profileService)
+
+	a.registerRoutes(authHandler, profileHandler)
 
 	return a, nil
 }
@@ -93,7 +98,10 @@ func (a *App) Close() error {
 	return a.storage.Close()
 }
 
-func (a *App) registerRoutes(authHandler *auth.Handler) {
+func (a *App) registerRoutes(
+	authHandler *auth.Handler,
+	profileHandler *profile.Handler,
+) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
@@ -104,6 +112,8 @@ func (a *App) registerRoutes(authHandler *auth.Handler) {
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware)
+			r.Get("/profile", profileHandler.HandleGetProfile())
+			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 		})
 	})
 }

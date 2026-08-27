@@ -1,6 +1,11 @@
 package profile
 
-import "time"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type GetProfileResponse struct {
 	User      UserDTO      `json:"user"`
@@ -31,9 +36,31 @@ type CosmeticsDTO struct {
 	OwnedCosmeticIDs []string `json:"ownedCosmeticIds"`
 }
 
+type OptionalString struct {
+	Set   bool
+	Value *string
+}
+
+func (o *OptionalString) UnmarshalJSON(data []byte) error {
+	o.Set = true
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		o.Value = nil
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return fmt.Errorf("expected string or null: %w", err)
+	}
+	if value == "" {
+		return fmt.Errorf("value must not be empty")
+	}
+	o.Value = &value
+	return nil
+}
+
 type UpdateCosmeticsRequest struct {
-	AvatarID       *string `json:"avatarId,omitempty"`
-	FrameID        *string `json:"frameId,omitempty"`
-	TitleID        *string `json:"titleId,omitempty"`
-	ShowcaseItemID *string `json:"showcaseItemId,omitempty"`
+	AvatarID       *string        `json:"avatarId,omitempty"`
+	FrameID        *string        `json:"frameId,omitempty"`
+	TitleID        OptionalString `json:"titleId"`
+	ShowcaseItemID OptionalString `json:"showcaseItemId"`
 }

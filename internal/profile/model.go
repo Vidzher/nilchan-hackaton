@@ -28,3 +28,10 @@ type Profile struct {
 	Progress  UserProgress
 	Cosmetics []UserCosmetic
 }
+
+type CosmeticsUpdate struct {
+	AvatarID       string
+	FrameID        string
+	TitleID        *string
+	ShowcaseItemID *string
+}

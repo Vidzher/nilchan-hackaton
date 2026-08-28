@@ -5,8 +5,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	httpapi_request "nilchan-hackaton/internal/httpapi/request"
-	httpapi_response "nilchan-hackaton/internal/httpapi/response"
+
+	"nilchan-hackaton/internal/httpapi/request"
+	"nilchan-hackaton/internal/httpapi/response"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
@@ -29,7 +30,7 @@ func NewHandler(service service, validate *validator.Validate) *Handler {
 
 func (h *Handler) HandleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := httpapi_request.DecodeAndValidate[LoginRequestDTO](w, r, h.validator)
+		req, ok := request.DecodeAndValidate[LoginRequestDTO](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -37,12 +38,12 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 		result, err := h.service.Login(r.Context(), req.Email, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
-				httpapi_response.RenderError(w, r, http.StatusUnauthorized, "invalid credentials")
+				response.RenderError(w, r, http.StatusUnauthorized, "invalid credentials")
 				return
 			}
 
 			logAuthError(r, "login failed", err)
-			httpapi_response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
+			response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
 			return
 		}
 
@@ -52,7 +53,7 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 
 func (h *Handler) HandleRegister() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := httpapi_request.DecodeAndValidate[RegisterRequestDTO](w, r, h.validator)
+		req, ok := request.DecodeAndValidate[RegisterRequestDTO](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -60,12 +61,12 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 		result, err := h.service.Register(r.Context(), req.Email, req.Username, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrUserAlreadyExists) {
-				httpapi_response.RenderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())
+				response.RenderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())
 				return
 			}
 
 			logAuthError(r, "registration failed", err)
-			httpapi_response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
+			response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
 			return
 		}
 
@@ -75,7 +76,7 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *Result) {
 	render.Status(r, status)
-	render.JSON(w, r, httpapi_response.Ok(AuthResponseDTO{
+	render.JSON(w, r, response.Ok(AuthResponseDTO{
 		UserID:   result.User.ID,
 		Email:    result.User.Email,
 		Username: result.User.Username,

@@ -11,11 +11,11 @@ import (
 )
 
 type repository struct {
-	db *storage.Storage
+	db *sql.DB
 }
 
-func NewRepository(db *storage.Storage) *repository {
-	return &repository{db: db}
+func NewRepository(storage *storage.Storage) *repository {
+	return &repository{db: storage.DB}
 }
 
 func (r *repository) GetProfile(

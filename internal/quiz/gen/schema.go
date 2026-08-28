@@ -36,7 +36,6 @@ const generationSchemaJSON = `{
             "type": "array",
             "minItems": 4,
             "maxItems": 4,
-            "uniqueItems": true,
             "items": {
               "type": "string",
               "minLength": 1

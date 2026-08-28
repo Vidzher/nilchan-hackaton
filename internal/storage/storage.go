@@ -13,7 +13,7 @@ import (
 var schemaSQL string
 
 type Storage struct {
-	*sql.DB
+	DB *sql.DB
 }
 
 func NewStorage(storagePath string) (*Storage, error) {

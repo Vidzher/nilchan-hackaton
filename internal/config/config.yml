@@ -8,3 +8,5 @@ http_server:
 firecrawl:
   base_url: "https://api.firecrawl.dev/v2/scrape"
   timeout: 30s
+openrouter:
+  model_name: "openai/gpt-5-nano"

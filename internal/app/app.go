@@ -5,10 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/httpapi/validation"
+	"nilchan-hackaton/internal/llm"
+	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/profile"
+	quizgen "nilchan-hackaton/internal/quiz/gen"
+	"nilchan-hackaton/internal/resource"
+	resourcerepo "nilchan-hackaton/internal/resource/repository"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -16,9 +22,10 @@ import (
 )
 
 type App struct {
-	cfg     *config.Config
-	router  chi.Router
-	storage *storage.Storage
+	cfg               *config.Config
+	router            chi.Router
+	storage           *storage.Storage
+	resourceProcessor *resource.Processor
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -28,7 +35,6 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	router := chi.NewRouter()
-
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
@@ -49,11 +55,40 @@ func New(cfg *config.Config) (*App, error) {
 	authService := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authService, validate)
 
+	firecrawlClient, err := parser.NewFirecrawlClient(
+		cfg.Firecrawl.APIKey,
+		cfg.Firecrawl.BaseURL,
+		&http.Client{Timeout: cfg.Firecrawl.Timeout})
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize Firecrawl client: %w", err)
+	}
+	openRouterClient, err := llm.NewOpenRouterClient(
+		cfg.OpenRouter.APIKey,
+		cfg.OpenRouter.ModelName)
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize OpenRouter client: %w", err)
+	}
+	quizGenerator, err := quizgen.NewGenerator(openRouterClient)
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize quiz generator: %w", err)
+	}
+	resourceRepo := resourcerepo.New(store)
+	a.resourceProcessor = resource.NewProcessor(resourceRepo, quizGenerator)
+	resourceService := resource.NewService(
+		resourceRepo,
+		firecrawlClient,
+		a.resourceProcessor,
+		cfg.Firecrawl.Timeout)
+	resourceHandler := resource.NewHandler(resourceService, validate)
+
 	profileRepo := profile.NewRepository(store)
 	profileService := profile.NewService(profileRepo)
-	profileHandler := profile.NewHandler(profileService)
+	profileHandler := profile.NewHandler(profileService, validate)
 
-	a.registerRoutes(authHandler, profileHandler)
+	a.registerRoutes(authHandler, resourceHandler, profileHandler)
 
 	return a, nil
 }
@@ -95,11 +130,15 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) Close() error {
+	if a.resourceProcessor != nil {
+		a.resourceProcessor.Close()
+	}
 	return a.storage.Close()
 }
 
 func (a *App) registerRoutes(
 	authHandler *auth.Handler,
+	resourceHandler *resource.Handler,
 	profileHandler *profile.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
@@ -112,6 +151,7 @@ func (a *App) registerRoutes(
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware)
+			r.Post("/resources", resourceHandler.HandleCreate())
 			r.Get("/profile", profileHandler.HandleGetProfile())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 		})

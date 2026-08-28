@@ -31,7 +31,7 @@ type Item struct {
 
 var catalog = []Item{
 	{
-		ID:          "avatar_default",
+		ID:          DefaultAvatarID,
 		Type:        ItemTypeAvatar,
 		DisplayName: "Default Avatar",
 		Price:       0,
@@ -42,7 +42,7 @@ var catalog = []Item{
 		},
 	},
 	{
-		ID:          "frame_default",
+		ID:          DefaultFrameID,
 		Type:        ItemTypeFrame,
 		DisplayName: "Default Frame",
 		Price:       0,

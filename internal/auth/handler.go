@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+
 	"nilchan-hackaton/internal/httpapi/request"
 	"nilchan-hackaton/internal/httpapi/response"
 
@@ -37,12 +38,12 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 		result, err := h.service.Login(r.Context(), req.Email, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrInvalidCredentials) {
-				renderError(w, r, http.StatusUnauthorized, "invalid credentials")
+				response.RenderError(w, r, http.StatusUnauthorized, "invalid credentials")
 				return
 			}
 
 			logAuthError(r, "login failed", err)
-			renderError(w, r, http.StatusInternalServerError, "internal server error")
+			response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
 			return
 		}
 
@@ -60,12 +61,12 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 		result, err := h.service.Register(r.Context(), req.Email, req.Username, req.Password)
 		if err != nil {
 			if errors.Is(err, ErrUserAlreadyExists) {
-				renderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())
+				response.RenderError(w, r, http.StatusConflict, ErrUserAlreadyExists.Error())
 				return
 			}
 
 			logAuthError(r, "registration failed", err)
-			renderError(w, r, http.StatusInternalServerError, "internal server error")
+			response.RenderError(w, r, http.StatusInternalServerError, "internal server error")
 			return
 		}
 
@@ -81,11 +82,6 @@ func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result
 		Username: result.User.Username,
 		Token:    result.Token,
 	}))
-}
-
-func renderError(w http.ResponseWriter, r *http.Request, status int, message string) {
-	render.Status(r, status)
-	render.JSON(w, r, response.Error(message))
 }
 
 func logAuthError(r *http.Request, message string, err error) {

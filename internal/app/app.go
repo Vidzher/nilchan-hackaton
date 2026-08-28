@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/httpapi/validation"
 	"nilchan-hackaton/internal/llm"
 	"nilchan-hackaton/internal/parser"
+	"nilchan-hackaton/internal/profile"
 	quizgen "nilchan-hackaton/internal/quiz/gen"
 	"nilchan-hackaton/internal/resource"
 	resourcerepo "nilchan-hackaton/internal/resource/repository"
@@ -82,7 +84,11 @@ func New(cfg *config.Config) (*App, error) {
 		cfg.Firecrawl.Timeout)
 	resourceHandler := resource.NewHandler(resourceService, validate)
 
-	a.registerRoutes(authHandler, resourceHandler)
+	profileRepo := profile.NewRepository(store)
+	profileService := profile.NewService(profileRepo)
+	profileHandler := profile.NewHandler(profileService, validate)
+
+	a.registerRoutes(authHandler, resourceHandler, profileHandler)
 
 	return a, nil
 }
@@ -130,7 +136,11 @@ func (a *App) Close() error {
 	return a.storage.Close()
 }
 
-func (a *App) registerRoutes(authHandler *auth.Handler, resourceHandler *resource.Handler) {
+func (a *App) registerRoutes(
+	authHandler *auth.Handler,
+	resourceHandler *resource.Handler,
+	profileHandler *profile.Handler,
+) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
@@ -142,6 +152,8 @@ func (a *App) registerRoutes(authHandler *auth.Handler, resourceHandler *resourc
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware)
 			r.Post("/resources", resourceHandler.HandleCreate())
+			r.Get("/profile", profileHandler.HandleGetProfile())
+			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 		})
 	})
 }

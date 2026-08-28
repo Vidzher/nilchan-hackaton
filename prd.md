@@ -212,7 +212,7 @@ MAX_TAGS = 8
 MAX_TAG_LENGTH = 32
 ```
 
-Content короче `MIN_CONTENT_WORDS` отклоняется. Content длиннее `MAX_CONTENT_CHARS` обрезается по последней полной границе paragraph перед лимитом; только сохранённая версия передаётся в LLM и используется как source of truth для evidence.
+Content короче `MIN_CONTENT_WORDS` отклоняется. Content длиннее `MAX_CONTENT_CHARS` отклоняется и не сохраняется.
 
 Title берётся только из Firecrawl metadata. Если metadata не содержит непустой title, Resource не создаётся. Tags берутся из metadata keywords; если их нет, backend локально выделяет ключевые слова из title, headings и content без дополнительного LLM request. Если подходящих слов нет, используется hostname. Tags приводятся к lowercase, очищаются от дублей и используются для фильтрации Resources.
 
@@ -239,7 +239,7 @@ MAX_QUESTIONS = 10
 - иметь правдоподобные distractors;
 - не требовать внешних знаний;
 - содержать непустое короткое `explanation`;
-- содержать непустое `evidence`, которое после нормализации whitespace встречается в source content.
+- содержать непустое `evidence`, чья последовательность слов после приведения к lowercase, удаления punctuation/Markdown-маркеров и нормализации whitespace непрерывно встречается в source content.
 
 Backend отклоняет весь сгенерированный quiz, если вопросов не 5–10, есть дубли вопросов или хотя бы один Question не проходит эти проверки. Порядок Questions определяется их позицией в JSON-массиве, а `totalQuestions` вычисляется как длина массива и отдельно не хранится.
 
@@ -286,7 +286,6 @@ OpenRouter вызывается со следующим structured output contra
                 "type": "array",
                 "minItems": 4,
                 "maxItems": 4,
-                "uniqueItems": true,
                 "items": {
                   "type": "string",
                   "minLength": 1
@@ -339,7 +338,7 @@ OpenRouter вызывается со следующим structured output contra
 }
 ```
 
-JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов, диапазон `correctIndex`, а также точное присутствие нормализованного `evidence` в сохранённом `Resource.content`. Любое нарушение отклоняет весь quiz и считается quiz validation error.
+JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов и диапазон `correctIndex`. Для проверки `evidence` backend приводит source и evidence к lowercase, заменяет все символы кроме Unicode letters и numbers на whitespace, нормализует whitespace и требует, чтобы последовательность слов evidence непрерывно встречалась в сохранённом `Resource.content`. Любое нарушение отклоняет весь quiz и считается quiz validation error.
 
 ---
 

@@ -3,6 +3,7 @@ package gen
 import (
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 func validateGeneratedQuiz(response GeneratedQuiz, sourceText string) error {
@@ -10,7 +11,7 @@ func validateGeneratedQuiz(response GeneratedQuiz, sourceText string) error {
 		return invalidQuizError(fmt.Sprintf("expected 5 to 10 questions, got %d", len(response.Questions)))
 	}
 
-	normalizedSource := normalizeText(sourceText)
+	normalizedSource := normalizeEvidence(sourceText)
 	seenQuestions := make(map[string]struct{}, len(response.Questions))
 
 	for questionIndex, question := range response.Questions {
@@ -48,11 +49,11 @@ func validateGeneratedQuiz(response GeneratedQuiz, sourceText string) error {
 			return invalidQuizError(fmt.Sprintf("question %d explanation is empty", questionIndex+1))
 		}
 
-		evidence := normalizeText(question.Evidence)
+		evidence := normalizeEvidence(question.Evidence)
 		if evidence == "" {
 			return invalidQuizError(fmt.Sprintf("question %d evidence is empty", questionIndex+1))
 		}
-		if !strings.Contains(normalizedSource, evidence) {
+		if !strings.Contains(" "+normalizedSource+" ", " "+evidence+" ") {
 			return invalidQuizError(fmt.Sprintf("question %d evidence was not found in the source", questionIndex+1))
 		}
 	}
@@ -62,4 +63,16 @@ func validateGeneratedQuiz(response GeneratedQuiz, sourceText string) error {
 
 func normalizeText(value string) string {
 	return strings.Join(strings.Fields(value), " ")
+}
+
+func normalizeEvidence(value string) string {
+	var normalized strings.Builder
+	for _, current := range value {
+		if unicode.IsLetter(current) || unicode.IsNumber(current) {
+			normalized.WriteRune(unicode.ToLower(current))
+			continue
+		}
+		normalized.WriteByte(' ')
+	}
+	return strings.Join(strings.Fields(normalized.String()), " ")
 }

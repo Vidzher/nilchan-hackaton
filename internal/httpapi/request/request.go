@@ -1,4 +1,4 @@
-package httpapi_request
+package request
 
 import (
 	"net/http"

@@ -1,4 +1,4 @@
-package httpapi_response
+package response
 
 import (
 	"net/http"

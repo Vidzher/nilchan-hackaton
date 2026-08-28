@@ -30,8 +30,8 @@ type Profile struct {
 }
 
 type CosmeticsUpdate struct {
-	AvatarID       string
-	FrameID        string
-	TitleID        *string
-	ShowcaseItemID *string
+	AvatarID       *string
+	FrameID        *string
+	TitleID        OptionalString
+	ShowcaseItemID OptionalString
 }

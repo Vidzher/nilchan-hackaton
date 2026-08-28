@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+
 	"nilchan-hackaton/internal/storage"
 )
 
@@ -39,7 +41,7 @@ func (r *repository) GetProfile(
 			p.title_id,
 			p.showcase_item_id
 		FROM users u
-		JOIN user_progress p 
+		JOIN user_progress p
 			ON p.user_id = u.id
 		WHERE u.id = ?
 	`,
@@ -101,20 +103,33 @@ func (r *repository) UpdateCosmetics(
 	userID int64,
 	update CosmeticsUpdate,
 ) error {
-	result, err := r.db.ExecContext(ctx, `
-		UPDATE user_progress
-		SET
-			avatar_id = ?,
-			frame_id = ?,
-			title_id = ?,
-			showcase_item_id = ?
-		WHERE user_id = ?
-	`,
-		update.AvatarID,
-		update.FrameID,
-		update.TitleID,
-		update.ShowcaseItemID,
-		userID,
+	setClauses := make([]string, 0, 4)
+	args := make([]any, 0, 5)
+	if update.AvatarID != nil {
+		setClauses = append(setClauses, "avatar_id = ?")
+		args = append(args, *update.AvatarID)
+	}
+	if update.FrameID != nil {
+		setClauses = append(setClauses, "frame_id = ?")
+		args = append(args, *update.FrameID)
+	}
+	if update.TitleID.Set {
+		setClauses = append(setClauses, "title_id = ?")
+		args = append(args, update.TitleID.Value)
+	}
+	if update.ShowcaseItemID.Set {
+		setClauses = append(setClauses, "showcase_item_id = ?")
+		args = append(args, update.ShowcaseItemID.Value)
+	}
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	args = append(args, userID)
+	result, err := r.db.ExecContext(
+		ctx,
+		"UPDATE user_progress SET "+strings.Join(setClauses, ", ")+" WHERE user_id = ?",
+		args...,
 	)
 	if err != nil {
 		return fmt.Errorf("update profile cosmetics: %w", err)

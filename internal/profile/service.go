@@ -81,11 +81,11 @@ func (s *Service) UpdateCosmetics(
 	for _, cosmetic := range current.Cosmetics {
 		owned[cosmetic.ItemID] = struct{}{}
 	}
-	next := CosmeticsUpdate{
-		AvatarID:       current.Progress.AvatarID,
-		FrameID:        current.Progress.FrameID,
-		TitleID:        current.Progress.TitleID,
-		ShowcaseItemID: current.Progress.ShowcaseItemID,
+	update := CosmeticsUpdate{
+		AvatarID:       req.AvatarID,
+		FrameID:        req.FrameID,
+		TitleID:        req.TitleID,
+		ShowcaseItemID: req.ShowcaseItemID,
 	}
 	if req.AvatarID != nil {
 		if err := validateOwnedType(
@@ -95,7 +95,6 @@ func (s *Service) UpdateCosmetics(
 		); err != nil {
 			return nil, err
 		}
-		next.AvatarID = *req.AvatarID
 	}
 	if req.FrameID != nil {
 		if err := validateOwnedType(
@@ -105,37 +104,26 @@ func (s *Service) UpdateCosmetics(
 		); err != nil {
 			return nil, err
 		}
-		next.FrameID = *req.FrameID
 	}
-	if req.TitleID.Set {
-		if req.TitleID.Value == nil {
-			next.TitleID = nil
-		} else {
-			if err := validateOwnedType(
-				*req.TitleID.Value,
-				cosmetics.ItemTypeTitle,
-				owned,
-			); err != nil {
-				return nil, err
-			}
-			next.TitleID = req.TitleID.Value
+	if req.TitleID.Set && req.TitleID.Value != nil {
+		if err := validateOwnedType(
+			*req.TitleID.Value,
+			cosmetics.ItemTypeTitle,
+			owned,
+		); err != nil {
+			return nil, err
 		}
 	}
-	if req.ShowcaseItemID.Set {
-		if req.ShowcaseItemID.Value == nil {
-			next.ShowcaseItemID = nil
-		} else {
-			if err := validateOwnedType(
-				*req.ShowcaseItemID.Value,
-				cosmetics.ItemTypeShowcase,
-				owned,
-			); err != nil {
-				return nil, err
-			}
-			next.ShowcaseItemID = req.ShowcaseItemID.Value
+	if req.ShowcaseItemID.Set && req.ShowcaseItemID.Value != nil {
+		if err := validateOwnedType(
+			*req.ShowcaseItemID.Value,
+			cosmetics.ItemTypeShowcase,
+			owned,
+		); err != nil {
+			return nil, err
 		}
 	}
-	if err := s.repository.UpdateCosmetics(ctx, userID, next); err != nil {
+	if err := s.repository.UpdateCosmetics(ctx, userID, update); err != nil {
 		return nil, err
 	}
 	return s.GetProfile(ctx, userID)

@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"errors"
 	"net"
 	"net/netip"
 	"net/url"
@@ -9,11 +8,6 @@ import (
 )
 
 const MaxURLLength = 2048
-
-var (
-	ErrInvalidURL = errors.New("invalid resource URL")
-	ErrBlockedURL = errors.New("resource URL is blocked")
-)
 
 func NormalizeURL(rawURL string) (string, error) {
 	rawURL = strings.TrimSpace(rawURL)

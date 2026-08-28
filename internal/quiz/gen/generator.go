@@ -68,7 +68,8 @@ func (g *Generator) Generate(ctx context.Context, request GenerationRequest) (*G
 		cancel()
 
 		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrGenerationFailed, err)
+			lastErr = fmt.Errorf("%w: %w", ErrGenerationFailed, err)
+			continue
 		}
 
 		var response GeneratedQuiz

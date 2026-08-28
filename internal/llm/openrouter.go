@@ -3,7 +3,9 @@ package llm
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"
@@ -35,7 +37,10 @@ func NewOpenRouterClient(apiKey, modelName string) (*OpenRouterClient, error) {
 	}
 
 	return &OpenRouterClient{
-		client:    openrouter.New(openrouter.WithSecurity(apiKey)),
+		client: openrouter.New(
+			openrouter.WithSecurity(apiKey),
+			openrouter.WithClient(&http.Client{Timeout: 125 * time.Second}),
+		),
 		modelName: modelName,
 	}, nil
 }

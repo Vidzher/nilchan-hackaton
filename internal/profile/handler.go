@@ -14,21 +14,21 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type profileService interface {
-	GetProfile(ctx context.Context, userID int64) (*ProfileResult, error)
+type service interface {
+	Get(ctx context.Context, userID int64) (*ProfileResult, error)
 	UpdateCosmetics(ctx context.Context, userID int64, update CosmeticsUpdate) (*ProfileResult, error)
 }
 
 type Handler struct {
-	service   profileService
+	service   service
 	validator *validator.Validate
 }
 
-func NewHandler(service profileService, validate *validator.Validate) *Handler {
+func NewHandler(service service, validate *validator.Validate) *Handler {
 	return &Handler{service: service, validator: validate}
 }
 
-func (h *Handler) HandleGetProfile() http.HandlerFunc {
+func (h *Handler) HandleGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := token.UserIDFromContext(r.Context())
 		if err != nil {
@@ -36,7 +36,7 @@ func (h *Handler) HandleGetProfile() http.HandlerFunc {
 			return
 		}
 
-		result, err := h.service.GetProfile(r.Context(), userID)
+		result, err := h.service.Get(r.Context(), userID)
 		if err != nil {
 			if errors.Is(err, ErrProfileNotFound) {
 				response.RenderError(w, r, http.StatusNotFound, "profile not found")
@@ -47,7 +47,7 @@ func (h *Handler) HandleGetProfile() http.HandlerFunc {
 			return
 		}
 
-		response.RenderJSON(w, r, http.StatusOK, response.Ok(toProfileResponse(result)))
+		response.RenderJSON(w, r, http.StatusOK, response.OK(toProfileResponse(result)))
 	}
 }
 
@@ -94,7 +94,7 @@ func (h *Handler) HandleUpdateCosmetics() http.HandlerFunc {
 			return
 		}
 
-		response.RenderJSON(w, r, http.StatusOK, response.Ok(toProfileResponse(result)))
+		response.RenderJSON(w, r, http.StatusOK, response.OK(toProfileResponse(result)))
 	}
 }
 

@@ -30,7 +30,7 @@ func NewOpenRouterClient(apiKey, modelName string) (*OpenRouterClient, error) {
 	modelName = strings.TrimSpace(modelName)
 
 	if apiKey == "" {
-		return nil, ErrInvalidApiKey
+		return nil, ErrInvalidAPIKey
 	}
 	if modelName == "" {
 		return nil, ErrInvalidModelName

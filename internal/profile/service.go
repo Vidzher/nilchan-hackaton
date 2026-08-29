@@ -8,7 +8,7 @@ import (
 )
 
 type profileRepository interface {
-	GetProfile(
+	Get(
 		ctx context.Context,
 		userID int64,
 	) (*Profile, error)
@@ -29,11 +29,11 @@ func NewService(repository profileRepository) *Service {
 	}
 }
 
-func (s *Service) GetProfile(
+func (s *Service) Get(
 	ctx context.Context,
 	userID int64,
 ) (*ProfileResult, error) {
-	data, err := s.repository.GetProfile(ctx, userID)
+	data, err := s.repository.Get(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (s *Service) UpdateCosmetics(
 	userID int64,
 	update CosmeticsUpdate,
 ) (*ProfileResult, error) {
-	current, err := s.repository.GetProfile(ctx, userID)
+	current, err := s.repository.Get(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *Service) UpdateCosmetics(
 	if err := s.repository.UpdateCosmetics(ctx, userID, update); err != nil {
 		return nil, err
 	}
-	return s.GetProfile(ctx, userID)
+	return s.Get(ctx, userID)
 }
 
 func validateOwnedType(

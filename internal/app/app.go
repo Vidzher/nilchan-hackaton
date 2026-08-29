@@ -29,7 +29,7 @@ type App struct {
 }
 
 func New(cfg *config.Config) (*App, error) {
-	store, err := storage.NewStorage(cfg.StoragePath)
+	store, err := storage.New(cfg.StoragePath)
 	if err != nil {
 		return nil, fmt.Errorf("initialize storage: %w", err)
 	}
@@ -152,7 +152,9 @@ func (a *App) registerRoutes(
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware)
 			r.Post("/resources", resourceHandler.HandleCreate())
-			r.Get("/profile", profileHandler.HandleGetProfile())
+			r.Get("/resources", resourceHandler.HandleList())
+			r.Get("/resources/{resourceID}", resourceHandler.HandleGet())
+			r.Get("/profile", profileHandler.HandleGet())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 		})
 	})

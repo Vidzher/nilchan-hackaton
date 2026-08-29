@@ -17,13 +17,13 @@ type ErrorResponse struct {
 }
 
 const (
-	StatusOk    = "OK"
+	StatusOK    = "OK"
 	StatusError = "Error"
 )
 
-func Ok(data any) SuccessResponse {
+func OK(data any) SuccessResponse {
 	return SuccessResponse{
-		Status: StatusOk,
+		Status: StatusOK,
 		Data:   data,
 	}
 }

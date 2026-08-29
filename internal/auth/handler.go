@@ -76,7 +76,7 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *Result) {
 	render.Status(r, status)
-	render.JSON(w, r, response.Ok(AuthResponse{
+	render.JSON(w, r, response.OK(AuthResponse{
 		UserID:   result.User.ID,
 		Email:    result.User.Email,
 		Username: result.User.Username,

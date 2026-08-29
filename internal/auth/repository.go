@@ -21,8 +21,8 @@ func NewRepository(storage *storage.Storage) *repository {
 	return &repository{storage: storage}
 }
 
-func (ar *repository) create(ctx context.Context, email, username, passwordHash string) (*user.User, error) {
-	tx, err := ar.storage.DB.BeginTx(ctx, nil)
+func (r *repository) create(ctx context.Context, email, username, passwordHash string) (*user.User, error) {
+	tx, err := r.storage.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin user creation: %w", err)
 	}
@@ -69,9 +69,9 @@ func (ar *repository) create(ctx context.Context, email, username, passwordHash 
 	return &created, nil
 }
 
-func (ar *repository) findOne(ctx context.Context, email string) (*user.User, error) {
+func (r *repository) findByEmail(ctx context.Context, email string) (*user.User, error) {
 	var found user.User
-	err := ar.storage.DB.QueryRowContext(ctx, `
+	err := r.storage.DB.QueryRowContext(ctx, `
 		SELECT id, email, username, password_hash, created_at
 		FROM users
 		WHERE email = ?

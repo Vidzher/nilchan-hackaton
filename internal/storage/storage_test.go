@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-func TestNewStorageConfiguresSQLiteAndAppliesSchema(t *testing.T) {
+func TestNewConfiguresSQLiteAndAppliesSchema(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "learning-backlog.db")
 
-	store, err := NewStorage(path)
+	store, err := New(path)
 	if err != nil {
-		t.Fatalf("NewStorage() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	var foreignKeys int
@@ -51,7 +51,7 @@ func TestNewStorageConfiguresSQLiteAndAppliesSchema(t *testing.T) {
 		t.Fatalf("close storage: %v", err)
 	}
 
-	store, err = NewStorage(path)
+	store, err = New(path)
 	if err != nil {
 		t.Fatalf("reopen storage: %v", err)
 	}

@@ -36,7 +36,7 @@ type HTTPServer struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env-default:"10s"`
 }
 
-func LoadConfig() *Config {
+func Load() *Config {
 	err := godotenv.Load("../.env.local")
 	if err != nil {
 		fmt.Printf("%s", err.Error())

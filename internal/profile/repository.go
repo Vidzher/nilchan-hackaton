@@ -18,7 +18,7 @@ func NewRepository(storage *storage.Storage) *repository {
 	return &repository{db: storage.DB}
 }
 
-func (r *repository) GetProfile(
+func (r *repository) Get(
 	ctx context.Context,
 	userID int64,
 ) (*Profile, error) {

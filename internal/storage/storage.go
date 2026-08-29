@@ -16,7 +16,7 @@ type Storage struct {
 	DB *sql.DB
 }
 
-func NewStorage(storagePath string) (*Storage, error) {
+func New(storagePath string) (*Storage, error) {
 	db, err := sql.Open("sqlite3", sqliteDSN(storagePath))
 	if err != nil {
 		return nil, fmt.Errorf("open storage: %w", err)

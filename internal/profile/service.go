@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+
 	"nilchan-hackaton/internal/cosmetics"
 	"nilchan-hackaton/internal/progress"
 )
@@ -31,47 +32,25 @@ func NewService(repository profileRepository) *Service {
 func (s *Service) GetProfile(
 	ctx context.Context,
 	userID int64,
-) (*GetProfileResponse, error) {
+) (*ProfileResult, error) {
 	data, err := s.repository.GetProfile(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	levelInfo := progress.FromXP(data.Progress.XP)
-	ownedIDs := make([]string, 0, len(data.Cosmetics))
-	for _, cosmetic := range data.Cosmetics {
-		ownedIDs = append(ownedIDs, cosmetic.ItemID)
-	}
-
-	return &GetProfileResponse{
-		User: ProfileUser{
-			ID:       data.User.ID,
-			Email:    data.User.Email,
-			Username: data.User.Username,
-		},
-		Progress: ProfileProgress{
-			XP:                 data.Progress.XP,
-			Level:              levelInfo.Level,
-			ActiveBacklogLimit: levelInfo.ActiveBacklogLimit,
-			EPoints:            data.Progress.EPoints,
-			CurrentStreak:      data.Progress.CurrentStreak,
-			LastCompletionAt:   data.Progress.LastCompletionAt,
-		},
-		Cosmetics: ProfileCosmetics{
-			AvatarID:         data.Progress.AvatarID,
-			FrameID:          data.Progress.FrameID,
-			TitleID:          data.Progress.TitleID,
-			ShowcaseItemID:   data.Progress.ShowcaseItemID,
-			OwnedCosmeticIDs: ownedIDs,
-		},
+	return &ProfileResult{
+		Profile:            data,
+		Level:              levelInfo.Level,
+		ActiveBacklogLimit: levelInfo.ActiveBacklogLimit,
 	}, nil
 }
 
 func (s *Service) UpdateCosmetics(
 	ctx context.Context,
 	userID int64,
-	req UpdateCosmeticsRequest,
-) (*GetProfileResponse, error) {
+	update CosmeticsUpdate,
+) (*ProfileResult, error) {
 	current, err := s.repository.GetProfile(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -81,42 +60,36 @@ func (s *Service) UpdateCosmetics(
 	for _, cosmetic := range current.Cosmetics {
 		owned[cosmetic.ItemID] = struct{}{}
 	}
-	update := CosmeticsUpdate{
-		AvatarID:       req.AvatarID,
-		FrameID:        req.FrameID,
-		TitleID:        req.TitleID,
-		ShowcaseItemID: req.ShowcaseItemID,
-	}
-	if req.AvatarID != nil {
+	if update.AvatarID != nil {
 		if err := validateOwnedType(
-			*req.AvatarID,
+			*update.AvatarID,
 			cosmetics.ItemTypeAvatar,
 			owned,
 		); err != nil {
 			return nil, err
 		}
 	}
-	if req.FrameID != nil {
+	if update.FrameID != nil {
 		if err := validateOwnedType(
-			*req.FrameID,
+			*update.FrameID,
 			cosmetics.ItemTypeFrame,
 			owned,
 		); err != nil {
 			return nil, err
 		}
 	}
-	if req.TitleID.Set && req.TitleID.Value != nil {
+	if update.TitleID.Set && update.TitleID.Value != nil {
 		if err := validateOwnedType(
-			*req.TitleID.Value,
+			*update.TitleID.Value,
 			cosmetics.ItemTypeTitle,
 			owned,
 		); err != nil {
 			return nil, err
 		}
 	}
-	if req.ShowcaseItemID.Set && req.ShowcaseItemID.Value != nil {
+	if update.ShowcaseItemID.Set && update.ShowcaseItemID.Value != nil {
 		if err := validateOwnedType(
-			*req.ShowcaseItemID.Value,
+			*update.ShowcaseItemID.Value,
 			cosmetics.ItemTypeShowcase,
 			owned,
 		); err != nil {

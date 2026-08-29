@@ -36,12 +36,12 @@ type ProfileCosmetics struct {
 	OwnedCosmeticIDs []string `json:"ownedCosmeticIds"`
 }
 
-type OptionalString struct {
+type NullableString struct {
 	Set   bool
 	Value *string
 }
 
-func (o *OptionalString) UnmarshalJSON(data []byte) error {
+func (o *NullableString) UnmarshalJSON(data []byte) error {
 	o.Set = true
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 		o.Value = nil
@@ -61,6 +61,6 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 type UpdateCosmeticsRequest struct {
 	AvatarID       *string        `json:"avatarId,omitempty"`
 	FrameID        *string        `json:"frameId,omitempty"`
-	TitleID        OptionalString `json:"titleId"`
-	ShowcaseItemID OptionalString `json:"showcaseItemId"`
+	TitleID        NullableString `json:"titleId"`
+	ShowcaseItemID NullableString `json:"showcaseItemId"`
 }

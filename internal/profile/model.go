@@ -29,9 +29,20 @@ type Profile struct {
 	Cosmetics []UserCosmetic
 }
 
+type ProfileResult struct {
+	Profile            *Profile
+	Level              int
+	ActiveBacklogLimit int
+}
+
+type OptionalCosmeticID struct {
+	Set   bool
+	Value *string
+}
+
 type CosmeticsUpdate struct {
 	AvatarID       *string
 	FrameID        *string
-	TitleID        OptionalString
-	ShowcaseItemID OptionalString
+	TitleID        OptionalCosmeticID
+	ShowcaseItemID OptionalCosmeticID
 }

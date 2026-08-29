@@ -15,8 +15,8 @@ import (
 )
 
 type profileService interface {
-	GetProfile(ctx context.Context, userID int64) (*GetProfileResponse, error)
-	UpdateCosmetics(ctx context.Context, userID int64, req UpdateCosmeticsRequest) (*GetProfileResponse, error)
+	GetProfile(ctx context.Context, userID int64) (*ProfileResult, error)
+	UpdateCosmetics(ctx context.Context, userID int64, update CosmeticsUpdate) (*ProfileResult, error)
 }
 
 type Handler struct {
@@ -47,7 +47,7 @@ func (h *Handler) HandleGetProfile() http.HandlerFunc {
 			return
 		}
 
-		response.RenderJSON(w, r, http.StatusOK, response.Ok(result))
+		response.RenderJSON(w, r, http.StatusOK, response.Ok(toProfileResponse(result)))
 	}
 }
 
@@ -64,7 +64,19 @@ func (h *Handler) HandleUpdateCosmetics() http.HandlerFunc {
 			return
 		}
 
-		result, err := h.service.UpdateCosmetics(r.Context(), userID, *body)
+		update := CosmeticsUpdate{
+			AvatarID: body.AvatarID,
+			FrameID:  body.FrameID,
+			TitleID: OptionalCosmeticID{
+				Set:   body.TitleID.Set,
+				Value: body.TitleID.Value,
+			},
+			ShowcaseItemID: OptionalCosmeticID{
+				Set:   body.ShowcaseItemID.Set,
+				Value: body.ShowcaseItemID.Value,
+			},
+		}
+		result, err := h.service.UpdateCosmetics(r.Context(), userID, update)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrUnknownCosmetic):
@@ -82,7 +94,37 @@ func (h *Handler) HandleUpdateCosmetics() http.HandlerFunc {
 			return
 		}
 
-		response.RenderJSON(w, r, http.StatusOK, response.Ok(result))
+		response.RenderJSON(w, r, http.StatusOK, response.Ok(toProfileResponse(result)))
+	}
+}
+
+func toProfileResponse(result *ProfileResult) GetProfileResponse {
+	ownedIDs := make([]string, len(result.Profile.Cosmetics))
+	for index, cosmetic := range result.Profile.Cosmetics {
+		ownedIDs[index] = cosmetic.ItemID
+	}
+
+	return GetProfileResponse{
+		User: ProfileUser{
+			ID:       result.Profile.User.ID,
+			Email:    result.Profile.User.Email,
+			Username: result.Profile.User.Username,
+		},
+		Progress: ProfileProgress{
+			XP:                 result.Profile.Progress.XP,
+			Level:              result.Level,
+			ActiveBacklogLimit: result.ActiveBacklogLimit,
+			EPoints:            result.Profile.Progress.EPoints,
+			CurrentStreak:      result.Profile.Progress.CurrentStreak,
+			LastCompletionAt:   result.Profile.Progress.LastCompletionAt,
+		},
+		Cosmetics: ProfileCosmetics{
+			AvatarID:         result.Profile.Progress.AvatarID,
+			FrameID:          result.Profile.Progress.FrameID,
+			TitleID:          result.Profile.Progress.TitleID,
+			ShowcaseItemID:   result.Profile.Progress.ShowcaseItemID,
+			OwnedCosmeticIDs: ownedIDs,
+		},
 	}
 }
 

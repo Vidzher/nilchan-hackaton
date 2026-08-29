@@ -44,7 +44,7 @@ func TestValidateGeneratedQuizAcceptsValidQuiz(t *testing.T) {
 			quiz := validGeneratedQuiz(questionCount)
 			quiz.Questions[0].Evidence = "Use   [context.Context](https://pkg.go.dev/context)\n\tto cancel work — even when status != OK & retries >= 2."
 
-			if err := validateGeneratedQuiz(quiz, validSource); err != nil {
+			if err := validateGeneratedQuiz(quiz); err != nil {
 				t.Fatalf("validate quiz: %v", err)
 			}
 		})
@@ -141,13 +141,6 @@ func TestValidateGeneratedQuizRejectsInvalidQuiz(t *testing.T) {
 			},
 			wantErrExp: `question 1 evidence is empty`,
 		},
-		{
-			name: "evidence absent from source",
-			mutate: func(quiz *GeneratedQuiz) {
-				quiz.Questions[0].Evidence = "Unsupported claim."
-			},
-			wantErrExp: `question 1 evidence was not found in the source`,
-		},
 	}
 
 	for _, tt := range tests {
@@ -155,7 +148,7 @@ func TestValidateGeneratedQuizRejectsInvalidQuiz(t *testing.T) {
 			quiz := validGeneratedQuiz(5)
 			tt.mutate(&quiz)
 
-			err := validateGeneratedQuiz(quiz, validSource)
+			err := validateGeneratedQuiz(quiz)
 			if err == nil {
 				t.Fatal("expected validation error")
 			}
@@ -184,7 +177,7 @@ func TestGeneratedQuestionPreservesExcessOptionsForValidation(t *testing.T) {
 		t.Fatalf("expected 5 decoded options, got %d", got)
 	}
 
-	err := validateGeneratedQuiz(quiz, validSource)
+	err := validateGeneratedQuiz(quiz)
 	if err == nil || !strings.Contains(err.Error(), "must have 4 options") {
 		t.Fatalf("expected option count error, got %v", err)
 	}

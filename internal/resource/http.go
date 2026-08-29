@@ -18,7 +18,3 @@ type CreateResourceRequest struct {
 	URL                  string `json:"url" validate:"required"`
 	PurchaseOverflowSlot bool   `json:"purchaseOverflowSlot"`
 }
-
-type CreateResourceResponse ResourceResponse
-
-type ListResourcesResponse []ResourceResponse

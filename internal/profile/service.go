@@ -44,12 +44,12 @@ func (s *Service) GetProfile(
 	}
 
 	return &GetProfileResponse{
-		User: UserDTO{
+		User: ProfileUser{
 			ID:       data.User.ID,
 			Email:    data.User.Email,
 			Username: data.User.Username,
 		},
-		Progress: ProgressDTO{
+		Progress: ProfileProgress{
 			XP:                 data.Progress.XP,
 			Level:              levelInfo.Level,
 			ActiveBacklogLimit: levelInfo.ActiveBacklogLimit,
@@ -57,7 +57,7 @@ func (s *Service) GetProfile(
 			CurrentStreak:      data.Progress.CurrentStreak,
 			LastCompletionAt:   data.Progress.LastCompletionAt,
 		},
-		Cosmetics: CosmeticsDTO{
+		Cosmetics: ProfileCosmetics{
 			AvatarID:         data.Progress.AvatarID,
 			FrameID:          data.Progress.FrameID,
 			TitleID:          data.Progress.TitleID,

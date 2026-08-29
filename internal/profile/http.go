@@ -8,18 +8,18 @@ import (
 )
 
 type GetProfileResponse struct {
-	User      UserDTO      `json:"user"`
-	Progress  ProgressDTO  `json:"progress"`
-	Cosmetics CosmeticsDTO `json:"cosmetics"`
+	User      ProfileUser      `json:"user"`
+	Progress  ProfileProgress  `json:"progress"`
+	Cosmetics ProfileCosmetics `json:"cosmetics"`
 }
 
-type UserDTO struct {
+type ProfileUser struct {
 	ID       int64  `json:"id"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
 }
 
-type ProgressDTO struct {
+type ProfileProgress struct {
 	XP                 int64      `json:"xp"`
 	Level              int        `json:"level"`
 	ActiveBacklogLimit int        `json:"activeBacklogLimit"`
@@ -28,7 +28,7 @@ type ProgressDTO struct {
 	LastCompletionAt   *time.Time `json:"lastCompletionAt,omitempty"`
 }
 
-type CosmeticsDTO struct {
+type ProfileCosmetics struct {
 	AvatarID         string   `json:"avatarId"`
 	FrameID          string   `json:"frameId"`
 	TitleID          *string  `json:"titleId,omitempty"`

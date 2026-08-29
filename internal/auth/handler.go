@@ -30,7 +30,7 @@ func NewHandler(service service, validate *validator.Validate) *Handler {
 
 func (h *Handler) HandleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := request.DecodeAndValidate[LoginRequestDTO](w, r, h.validator)
+		req, ok := request.DecodeAndValidate[LoginRequest](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -53,7 +53,7 @@ func (h *Handler) HandleLogin() http.HandlerFunc {
 
 func (h *Handler) HandleRegister() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, ok := request.DecodeAndValidate[RegisterRequestDTO](w, r, h.validator)
+		req, ok := request.DecodeAndValidate[RegisterRequest](w, r, h.validator)
 		if !ok {
 			return
 		}
@@ -76,7 +76,7 @@ func (h *Handler) HandleRegister() http.HandlerFunc {
 
 func renderAuthResult(w http.ResponseWriter, r *http.Request, status int, result *Result) {
 	render.Status(r, status)
-	render.JSON(w, r, response.Ok(AuthResponseDTO{
+	render.JSON(w, r, response.Ok(AuthResponse{
 		UserID:   result.User.ID,
 		Email:    result.User.Email,
 		Username: result.User.Username,

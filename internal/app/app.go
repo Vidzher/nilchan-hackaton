@@ -12,6 +12,7 @@ import (
 	"nilchan-hackaton/internal/llm"
 	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/profile"
+	"nilchan-hackaton/internal/quiz"
 	quizgen "nilchan-hackaton/internal/quiz/gen"
 	"nilchan-hackaton/internal/resource"
 	resourcerepo "nilchan-hackaton/internal/resource/repository"
@@ -84,11 +85,15 @@ func New(cfg *config.Config) (*App, error) {
 		cfg.Firecrawl.Timeout)
 	resourceHandler := resource.NewHandler(resourceService, validate)
 
+	quizRepo := quiz.NewRepository(store)
+	quizService := quiz.NewService(quizRepo)
+	quizHandler := quiz.NewHandler(quizService, validate)
+
 	profileRepo := profile.NewRepository(store)
 	profileService := profile.NewService(profileRepo)
 	profileHandler := profile.NewHandler(profileService, validate)
 
-	a.registerRoutes(authHandler, resourceHandler, profileHandler)
+	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler)
 
 	return a, nil
 }
@@ -139,6 +144,7 @@ func (a *App) Close() error {
 func (a *App) registerRoutes(
 	authHandler *auth.Handler,
 	resourceHandler *resource.Handler,
+	quizHandler *quiz.Handler,
 	profileHandler *profile.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
@@ -154,6 +160,8 @@ func (a *App) registerRoutes(
 			r.Post("/resources", resourceHandler.HandleCreate())
 			r.Get("/resources", resourceHandler.HandleList())
 			r.Get("/resources/{resourceID}", resourceHandler.HandleGet())
+			r.Get("/resources/{resourceID}/quiz", quizHandler.HandleGet())
+			r.Post("/resources/{resourceID}/quiz/complete", quizHandler.HandleComplete())
 			r.Get("/profile", profileHandler.HandleGet())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 		})

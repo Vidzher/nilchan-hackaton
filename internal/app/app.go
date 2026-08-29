@@ -77,6 +77,15 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("initialize quiz generator: %w", err)
 	}
 	resourceRepo := resourcerepo.New(store)
+	recovered, err := resourceRepo.RecoverProcessing(context.Background())
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("recover interrupted resource processing: %w", err)
+	}
+	if recovered > 0 {
+		fmt.Printf("recovered %d interrupted processing resources\n", recovered)
+	}
+
 	a.resourceProcessor = resource.NewProcessor(resourceRepo, quizGenerator)
 	resourceService := resource.NewService(
 		resourceRepo,

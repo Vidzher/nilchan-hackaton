@@ -11,7 +11,7 @@ import (
 	quizgen "nilchan-hackaton/internal/quiz/gen"
 )
 
-const maxConcurrentGeneration = 3
+const maxConcurrentGeneration = 5
 
 type quizGenerator interface {
 	Generate(ctx context.Context, request quizgen.GenerationRequest) (*quizgen.GeneratedQuiz, error)

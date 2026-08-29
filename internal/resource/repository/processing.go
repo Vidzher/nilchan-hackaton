@@ -58,6 +58,49 @@ func (r *Repository) CompleteGeneration(ctx context.Context, resourceID int64, t
 	return nil
 }
 
+func (r *Repository) RecoverProcessing(ctx context.Context) (int64, error) {
+	tx, err := r.storage.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin processing recovery: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE user_progress
+		SET e_points = e_points + ? * (
+			SELECT COUNT(*) FROM resources
+			WHERE user_id = user_progress.user_id
+			  AND status = ?
+			  AND purchased_overflow_slot = 1
+		)
+		WHERE EXISTS (
+			SELECT 1 FROM resources
+			WHERE user_id = user_progress.user_id
+			  AND status = ?
+			  AND purchased_overflow_slot = 1
+		)
+	`, overflowSlotPrice, resource.StatusProcessing, resource.StatusProcessing); err != nil {
+		return 0, fmt.Errorf("refund interrupted overflow slots: %w", err)
+	}
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE resources
+		SET status = ?, purchased_overflow_slot = 0
+		WHERE status = ?
+	`, resource.StatusFailed, resource.StatusProcessing)
+	if err != nil {
+		return 0, fmt.Errorf("recover processing resources: %w", err)
+	}
+	recovered, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("inspect processing recovery: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit processing recovery: %w", err)
+	}
+	return recovered, nil
+}
+
 func (r *Repository) FailGeneration(ctx context.Context, resourceID int64) error {
 	tx, err := r.storage.DB.BeginTx(ctx, nil)
 	if err != nil {

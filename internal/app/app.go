@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 
 	"nilchan-hackaton/internal/auth"
@@ -116,9 +118,15 @@ func (a *App) Run(ctx context.Context) error {
 		IdleTimeout:  a.cfg.HTTPServer.IdleTimeout,
 	}
 
+	listener, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		return fmt.Errorf("listen HTTP: %w", err)
+	}
+	log.Printf("HTTP server started on %s", listener.Addr())
+
 	serverErrors := make(chan error, 1)
 	go func() {
-		serverErrors <- srv.ListenAndServe()
+		serverErrors <- srv.Serve(listener)
 	}()
 
 	select {

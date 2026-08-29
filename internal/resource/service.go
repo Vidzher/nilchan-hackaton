@@ -17,32 +17,52 @@ type pageParser interface {
 
 type resourceRepository interface {
 	FindByURL(ctx context.Context, userID int64, resourceURL string) (*Resource, error)
+	FindByID(ctx context.Context, userID, resourceID int64) (*Summary, error)
+	List(ctx context.Context, userID int64, status, tag string) ([]Summary, error)
 	CheckCapacity(ctx context.Context, userID int64, purchaseOverflow bool) error
 	CreateProcessing(ctx context.Context, draft Resource, purchaseOverflow bool) (*Resource, error)
 	RetryFailed(ctx context.Context, resourceID, userID int64, allowOverflowPurchase bool) (overflowSlotPurchased bool, err error)
 }
 
-type resourceProcessor interface {
+type submitter interface {
 	Submit(resource *Resource)
 }
 
 type Service struct {
 	repo             resourceRepository
 	parser           pageParser
-	processor        resourceProcessor
+	submitter        submitter
 	firecrawlTimeout time.Duration
 }
 
-func NewService(repo resourceRepository, pageParser pageParser, processor resourceProcessor, firecrawlTimeout time.Duration) *Service {
+func NewService(repo resourceRepository, pageParser pageParser, submitter submitter, firecrawlTimeout time.Duration) *Service {
 	return &Service{
 		repo:             repo,
 		parser:           pageParser,
-		processor:        processor,
+		submitter:        submitter,
 		firecrawlTimeout: firecrawlTimeout,
 	}
 }
 
-func (s *Service) Add(ctx context.Context, userID int64, request CreateResourceRequest) (*Resource, error) {
+func (s *Service) Get(ctx context.Context, userID, resourceID int64) (*Summary, error) {
+	found, err := s.repo.FindByID(ctx, userID, resourceID)
+	if err != nil {
+		return nil, err
+	}
+	if found == nil {
+		return nil, ErrNotFound
+	}
+	return found, nil
+}
+
+func (s *Service) List(ctx context.Context, userID int64, status, tag string) ([]Summary, error) {
+	if status != "" && !Status(status).Valid() {
+		return nil, ErrInvalidStatus
+	}
+	return s.repo.List(ctx, userID, status, tag)
+}
+
+func (s *Service) Create(ctx context.Context, userID int64, request CreateResourceRequest) (*Resource, error) {
 
 	normalizedURL, err := NormalizeURL(request.URL)
 	if err != nil {
@@ -64,7 +84,7 @@ func (s *Service) Add(ctx context.Context, userID int64, request CreateResourceR
 			}
 			existing.Status = StatusProcessing
 			existing.PurchasedOverflowSlot = overflowSlotPurchased
-			s.processor.Submit(existing)
+			s.submitter.Submit(existing)
 			return existing, nil
 		default:
 			return nil, ErrDuplicate
@@ -106,7 +126,7 @@ func (s *Service) Add(ctx context.Context, userID int64, request CreateResourceR
 		return nil, err
 	}
 
-	s.processor.Submit(created)
+	s.submitter.Submit(created)
 	return created, nil
 }
 

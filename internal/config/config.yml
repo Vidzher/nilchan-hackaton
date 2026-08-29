@@ -1,0 +1,12 @@
+env: "local"
+storage_path: "../storage/storage.db"
+http_server:
+  address: "localhost:8080"
+  timeout: 40s
+  idle_timeout: 60s
+  shutdown_timeout: 10s
+firecrawl:
+  base_url: "https://api.firecrawl.dev/v2/scrape"
+  timeout: 30s
+openrouter:
+  model_name: "openai/gpt-5-nano"

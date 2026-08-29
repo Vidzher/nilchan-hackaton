@@ -15,17 +15,68 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type resourceService interface {
-	Add(ctx context.Context, userID int64, request CreateResourceRequest) (*Resource, error)
+type service interface {
+	Create(ctx context.Context, userID int64, request CreateResourceRequest) (*Resource, error)
+	Get(ctx context.Context, userID, resourceID int64) (*Summary, error)
+	List(ctx context.Context, userID int64, status, tag string) ([]Summary, error)
 }
 
 type Handler struct {
-	service   resourceService
+	service   service
 	validator *validator.Validate
 }
 
-func NewHandler(service resourceService, validate *validator.Validate) *Handler {
+func NewHandler(service service, validate *validator.Validate) *Handler {
 	return &Handler{service: service, validator: validate}
+}
+
+func (h *Handler) HandleList() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := token.UserIDFromContext(r.Context())
+		if err != nil {
+			renderResourceError(w, r, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		resources, err := h.service.List(
+			r.Context(),
+			userID,
+			r.URL.Query().Get("status"),
+			r.URL.Query().Get("tag"),
+		)
+		if err != nil {
+			h.handleError(w, r, err)
+			return
+		}
+
+		result := make([]ResourceResponse, len(resources))
+		for index := range resources {
+			result[index] = toSummaryResponse(&resources[index])
+		}
+		response.RenderJSON(w, r, http.StatusOK, response.OK(result))
+	}
+}
+
+func (h *Handler) HandleGet() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resourceID, err := request.PathInt64(r, "resourceID")
+		if err != nil {
+			renderResourceError(w, r, http.StatusBadRequest, "invalid resource ID")
+			return
+		}
+		userID, err := token.UserIDFromContext(r.Context())
+		if err != nil {
+			renderResourceError(w, r, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		found, err := h.service.Get(r.Context(), userID, resourceID)
+		if err != nil {
+			h.handleError(w, r, err)
+			return
+		}
+		response.RenderJSON(w, r, http.StatusOK, response.OK(toSummaryResponse(found)))
+	}
 }
 
 func (h *Handler) HandleCreate() http.HandlerFunc {
@@ -40,21 +91,23 @@ func (h *Handler) HandleCreate() http.HandlerFunc {
 			return
 		}
 
-		created, err := h.service.Add(r.Context(), userID, *body)
+		created, err := h.service.Create(r.Context(), userID, *body)
 		if err != nil {
 			h.handleError(w, r, err)
 			return
 		}
 
 		render.Status(r, http.StatusAccepted)
-		render.JSON(w, r, response.Ok(toResponse(created)))
+		render.JSON(w, r, response.OK(toResourceResponse(created)))
 	}
 }
 
 func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, ErrInvalidURL), errors.Is(err, ErrBlockedURL):
+	case errors.Is(err, ErrInvalidURL), errors.Is(err, ErrBlockedURL), errors.Is(err, ErrInvalidStatus):
 		renderResourceError(w, r, http.StatusBadRequest, err.Error())
+	case errors.Is(err, ErrNotFound):
+		renderResourceError(w, r, http.StatusNotFound, ErrNotFound.Error())
 	case errors.Is(err, ErrDuplicate):
 		renderResourceError(w, r, http.StatusConflict, ErrDuplicate.Error())
 	case errors.Is(err, ErrBacklogFull):
@@ -80,7 +133,21 @@ func renderResourceError(w http.ResponseWriter, r *http.Request, status int, mes
 	render.JSON(w, r, response.Error(message))
 }
 
-func toResponse(value *Resource) ResourceResponse {
+func toResourceResponse(value *Resource) ResourceResponse {
+	return ResourceResponse{
+		ID:            value.ID,
+		URL:           value.URL,
+		Title:         value.Title,
+		Tags:          value.Tags,
+		Status:        string(value.Status),
+		CreatedAt:     value.CreatedAt,
+		CompletedAt:   value.CompletedAt,
+		XPEarned:      value.XPEarned,
+		EPointsEarned: value.EPointsEarned,
+	}
+}
+
+func toSummaryResponse(value *Summary) ResourceResponse {
 	return ResourceResponse{
 		ID:            value.ID,
 		URL:           value.URL,

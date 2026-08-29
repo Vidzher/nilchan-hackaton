@@ -87,7 +87,7 @@ func TestAddResourceHappyPathRealProviders(t *testing.T) {
 	t.Logf("      model=%s url=%s", openRouterModel, resourceURL)
 
 	t.Log("[2/8] Creating isolated SQLite database and test user")
-	store, err := storage.NewStorage(filepath.Join(t.TempDir(), "integration.db"))
+	store, err := storage.New(filepath.Join(t.TempDir(), "integration.db"))
 	if err != nil {
 		t.Fatalf("create storage: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestAddResourceHappyPathRealProviders(t *testing.T) {
 
 	t.Log("[4/8] Normalizing URL and fetching content from Firecrawl")
 	addStarted := time.Now()
-	created, err := service.Add(context.Background(), userID, resource.CreateResourceRequest{URL: resourceURL})
+	created, err := service.Create(context.Background(), userID, resource.CreateResourceRequest{URL: resourceURL})
 	if err != nil {
 		t.Fatalf("add resource: %v", err)
 	}

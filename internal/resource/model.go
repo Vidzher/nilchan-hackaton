@@ -26,6 +26,18 @@ type Resource struct {
 	EPointsEarned         *int
 }
 
+type Summary struct {
+	ID            int64
+	URL           string
+	Title         string
+	Tags          []string
+	Status        Status
+	CreatedAt     time.Time
+	CompletedAt   *time.Time
+	XPEarned      *int
+	EPointsEarned *int
+}
+
 func (s Status) Valid() bool {
 	switch s {
 	case StatusProcessing, StatusFailed, StatusNotCompleted, StatusCompleted:

@@ -55,7 +55,7 @@ func (h *Handler) HandlePurchase() http.HandlerFunc {
 
 		result, err := h.service.Purchase(r.Context(), userID, body.ItemID)
 		if err != nil {
-			h.handlePurchaseError(w, r, err)
+			h.handleError(w, r, err)
 			return
 		}
 
@@ -66,7 +66,7 @@ func (h *Handler) HandlePurchase() http.HandlerFunc {
 	}
 }
 
-func (h *Handler) handlePurchaseError(w http.ResponseWriter, r *http.Request, err error) {
+func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ErrUnknownItem):
 		response.RenderError(w, r, http.StatusUnprocessableEntity, ErrUnknownItem.Error())

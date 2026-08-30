@@ -11,6 +11,7 @@ import (
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/httpapi/validation"
+	"nilchan-hackaton/internal/leaderboard"
 	"nilchan-hackaton/internal/llm"
 	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/profile"
@@ -109,7 +110,11 @@ func New(cfg *config.Config) (*App, error) {
 	shopService := shop.NewService(shopRepo)
 	shopHandler := shop.NewHandler(shopService, validate)
 
-	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler)
+	leaderboardRepo := leaderboard.NewRepository(store)
+	leaderboardService := leaderboard.NewService(leaderboardRepo)
+	leaderboardHandler := leaderboard.NewHandler(leaderboardService)
+
+	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler, leaderboardHandler)
 
 	return a, nil
 }
@@ -169,6 +174,7 @@ func (a *App) registerRoutes(
 	quizHandler *quiz.Handler,
 	profileHandler *profile.Handler,
 	shopHandler *shop.Handler,
+	leaderboardHandler *leaderboard.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
@@ -189,6 +195,7 @@ func (a *App) registerRoutes(
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 			r.Get("/shop", shopHandler.HandleList())
 			r.Post("/shop/purchase", shopHandler.HandlePurchase())
+			r.Get("/leaderboard", leaderboardHandler.HandleList())
 		})
 	})
 }

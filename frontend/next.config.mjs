@@ -4,6 +4,9 @@ import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
 /** @type {import('next').NextConfig} */
 const sharedConfig = {
   trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
 }
 
 export default function nextConfig(phase) {

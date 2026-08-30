@@ -3,14 +3,22 @@ package main
 import (
 	"context"
 	"log"
-	"nilchan-hackaton/internal/app"
-	"nilchan-hackaton/internal/config"
 	"os/signal"
 	"syscall"
+
+	"nilchan-hackaton/internal/app"
+	"nilchan-hackaton/internal/config"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	cfg := config.Load()
+	_ = godotenv.Load(".env.local")
+
+	cfg, err := config.Load("internal/config/config.yml")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	application, err := app.New(cfg)
 	if err != nil {

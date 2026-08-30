@@ -58,6 +58,10 @@ func (r *recordingCompleter) logAttempts(t *testing.T) {
 }
 
 func TestAddResourceHappyPathRealProviders(t *testing.T) {
+	if os.Getenv("RUN_PROVIDER_INTEGRATION_TESTS") != "1" {
+		t.Skip("set RUN_PROVIDER_INTEGRATION_TESTS=1 to run real-provider tests")
+	}
+
 	t.Log("[1/8] Loading provider configuration")
 	_ = godotenv.Load("../../.env.local")
 

@@ -2,12 +2,11 @@ package config
 
 import (
 	"fmt"
-	"log"
-	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -36,27 +35,25 @@ type HTTPServer struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env-default:"10s"`
 }
 
-func Load() *Config {
-	err := godotenv.Load("../.env.local")
+func Load(path string) (*Config, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, fmt.Errorf("config path is empty")
+	}
+
+	absolutePath, err := filepath.Abs(path)
 	if err != nil {
-		fmt.Printf("%s", err.Error())
-		log.Fatalf("Cannot load .env")
-	}
-
-	cfgPath := os.Getenv("CFG_PATH")
-	if cfgPath == "" {
-		log.Fatalf("CFG_PATH is not set")
-	}
-
-	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist: %s", cfgPath)
+		return nil, fmt.Errorf("resolve config path: %w", err)
 	}
 
 	var cfg Config
-
-	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err.Error())
+	if err := cleanenv.ReadConfig(absolutePath, &cfg); err != nil {
+		return nil, fmt.Errorf("read config %s: %w", absolutePath, err)
 	}
 
-	return &cfg
+	if cfg.StoragePath != "" && cfg.StoragePath != ":memory:" && !filepath.IsAbs(cfg.StoragePath) && !strings.HasPrefix(cfg.StoragePath, "file:") {
+		cfg.StoragePath = filepath.Join(filepath.Dir(absolutePath), cfg.StoragePath)
+	}
+
+	return &cfg, nil
 }

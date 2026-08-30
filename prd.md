@@ -509,12 +509,20 @@ showcaseItemId?: string
 
 | Item                     | Type     | Цена |
 | ------------------------ | -------- | ---: |
-| 🐸 Frog                  | Avatar   |   15 |
-| 🤖 Robot                 | Avatar   |   25 |
-| 🧙 Wizard                | Avatar   |   40 |
-| Neon                     | Frame    |   30 |
-| Fire                     | Frame    |   50 |
-| Gold                     | Frame    |  120 |
+| Вкатун                   | Avatar   |   15 |
+| Жабыч                    | Avatar   |   20 |
+| Работяга                 | Avatar   |   25 |
+| Думерок                  | Avatar   |   30 |
+| Окакыч                   | Avatar   |   35 |
+| Кабаныч                  | Avatar   |   40 |
+| Гофер Галерный           | Avatar   |   50 |
+| Нейрофрукт               | Avatar   |   60 |
+| Величайший               | Avatar   |   80 |
+| Базовик                  | Avatar   |  120 |
+| Островитянин             | Avatar   |  150 |
+| Неоновая                 | Frame    |   30 |
+| Горящий прод             | Frame    |   50 |
+| Золотой релиз            | Frame    |  120 |
 | Вкатун                          | Title    |   20 |
 | Заводчанин                      | Title    |   30 |
 | 1Сник                           | Title    |   35 |

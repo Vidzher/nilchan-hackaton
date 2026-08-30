@@ -33,18 +33,17 @@ var catalog = []Item{
 	{
 		ID:          DefaultAvatarID,
 		Type:        ItemTypeAvatar,
-		DisplayName: "Default Avatar",
+		DisplayName: "Нормис",
 		Price:       0,
 		Free:        true,
 		Presentation: Presentation{
-			Emoji:    "🙂",
-			AssetKey: "avatar-default",
+			Emoji: "🙂",
 		},
 	},
 	{
 		ID:          DefaultFrameID,
 		Type:        ItemTypeFrame,
-		DisplayName: "Default Frame",
+		DisplayName: "Без рамки",
 		Price:       0,
 		Free:        true,
 		Presentation: Presentation{
@@ -53,39 +52,119 @@ var catalog = []Item{
 		},
 	},
 	{
-		ID:          "avatar_frog",
+		ID:          "avatar_vkatun",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Frog",
+		DisplayName: "Вкатун",
 		Price:       15,
 		Presentation: Presentation{
-			Emoji:    "🐸",
-			AssetKey: "avatar-frog",
+			Emoji:    "🛒",
+			AssetKey: "avatar-vkatun",
 		},
 	},
 	{
-		ID:          "avatar_robot",
+		ID:          "avatar_zhabych",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Robot",
+		DisplayName: "Жабыч",
+		Price:       20,
+		Presentation: Presentation{
+			Emoji:    "🐸",
+			AssetKey: "avatar-zhabych",
+		},
+	},
+	{
+		ID:          "avatar_rabotyaga",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Работяга",
 		Price:       25,
 		Presentation: Presentation{
-			Emoji:    "🤖",
-			AssetKey: "avatar-robot",
+			Emoji:    "👨",
+			AssetKey: "avatar-rabotyaga",
 		},
 	},
 	{
-		ID:          "avatar_wizard",
+		ID:          "avatar_doomer",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Wizard",
+		DisplayName: "Думерок",
+		Price:       30,
+		Presentation: Presentation{
+			Emoji:    "🌑",
+			AssetKey: "avatar-doomer",
+		},
+	},
+	{
+		ID:          "avatar_okakych",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Окакыч",
+		Price:       35,
+		Presentation: Presentation{
+			Emoji:    "🐱",
+			AssetKey: "avatar-okakych",
+		},
+	},
+	{
+		ID:          "avatar_kabanych",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Кабаныч",
 		Price:       40,
 		Presentation: Presentation{
-			Emoji:    "🧙",
-			AssetKey: "avatar-wizard",
+			Emoji:    "🐗",
+			AssetKey: "avatar-kabanych",
+		},
+	},
+	{
+		ID:          "avatar_gopher",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Гофер Галерный",
+		Price:       50,
+		Presentation: Presentation{
+			Emoji:    "🐹",
+			AssetKey: "avatar-gopher",
+		},
+	},
+	{
+		ID:          "avatar_neurofruit",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Нейрофрукт",
+		Price:       60,
+		Presentation: Presentation{
+			Emoji:    "🍊",
+			AssetKey: "avatar-neurofruit",
+		},
+	},
+	{
+		ID:          "avatar_greatest",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Величайший",
+		Price:       80,
+		Presentation: Presentation{
+			Emoji:    "🎮",
+			AssetKey: "avatar-greatest",
+		},
+	},
+	{
+		ID:          "avatar_basovik",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Базовик",
+		Price:       120,
+		Presentation: Presentation{
+			Emoji:    "🗿",
+			AssetKey: "avatar-basovik",
+		},
+	},
+	{
+		ID:          "avatar_islander",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Островитянин",
+		Price:       150,
+		Presentation: Presentation{
+			Emoji:    "🏝️",
+			AssetKey: "avatar-islander",
 		},
 	},
 	{
 		ID:          "frame_neon",
 		Type:        ItemTypeFrame,
-		DisplayName: "Neon",
+		DisplayName: "Неоновая",
 		Price:       30,
 		Presentation: Presentation{
 			AssetKey: "frame-neon",
@@ -95,7 +174,7 @@ var catalog = []Item{
 	{
 		ID:          "frame_fire",
 		Type:        ItemTypeFrame,
-		DisplayName: "Fire",
+		DisplayName: "Горящий прод",
 		Price:       50,
 		Presentation: Presentation{
 			AssetKey: "frame-fire",
@@ -105,7 +184,7 @@ var catalog = []Item{
 	{
 		ID:          "frame_gold",
 		Type:        ItemTypeFrame,
-		DisplayName: "Gold",
+		DisplayName: "Золотой релиз",
 		Price:       120,
 		Presentation: Presentation{
 			AssetKey: "frame-gold",

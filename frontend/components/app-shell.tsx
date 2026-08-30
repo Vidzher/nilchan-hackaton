@@ -11,9 +11,9 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react'
+import { AvatarFrame, avatarImagePath } from '@/components/avatar-frame'
 import { cn } from '@/lib/utils'
-import { api, clearToken, type Profile } from '@/lib/api'
-import { cosmeticPreview } from '@/lib/cosmetics'
+import { api, clearToken, type Profile, type ShopItem } from '@/lib/api'
 
 type NavItem = { href: string; label: string; icon: LucideIcon }
 
@@ -43,9 +43,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [avatar, setAvatar] = useState<ShopItem | null>(null)
+  const [frame, setFrame] = useState<ShopItem | null>(null)
 
   useEffect(() => {
-    api.profile().then(setProfile).catch(() => undefined)
+    Promise.all([api.profile(), api.shop()])
+      .then(([nextProfile, catalog]) => {
+        setProfile(nextProfile)
+        setAvatar(catalog.find((item) => item.id === nextProfile.cosmetics.avatarId) ?? null)
+        setFrame(catalog.find((item) => item.id === nextProfile.cosmetics.frameId) ?? null)
+      })
+      .catch(() => undefined)
   }, [pathname])
 
   function logout() {
@@ -83,9 +91,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="mt-auto flex items-center gap-3 rounded-lg border border-border p-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-md bg-brand-soft text-lg">
-            {cosmeticPreview(profile?.cosmetics.avatarId)}
-          </span>
+          <AvatarFrame
+            src={avatarImagePath(avatar?.presentation.assetKey)}
+            fallback={avatar?.presentation.emoji}
+            frame={frame?.presentation.cssClass}
+            size="sm"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{profile?.user.username ?? '…'}</p>
             <p className="text-xs text-muted-foreground">Уровень {profile?.progress.level ?? '…'}</p>

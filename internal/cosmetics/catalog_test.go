@@ -4,8 +4,8 @@ import "testing"
 
 func TestCatalog(t *testing.T) {
 	items := All()
-	if len(items) < 10 || len(items) > 30 {
-		t.Fatalf("catalog size = %d, want 10..30", len(items))
+	if len(items) < 10 || len(items) > 40 {
+		t.Fatalf("catalog size = %d, want 10..40", len(items))
 	}
 	seen := make(map[string]struct{}, len(items))
 	for _, item := range items {

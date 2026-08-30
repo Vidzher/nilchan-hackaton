@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Coins, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AvatarFrame, avatarImagePath } from '@/components/avatar-frame'
 import { TitleBadge } from '@/components/title-badge'
 import { cn } from '@/lib/utils'
 import {
@@ -66,6 +67,8 @@ export function ShopView() {
   const visible = items.filter((item) => category === 'Все' || item.type === category)
   const balance = profile?.progress.ePoints ?? 0
   const owned = new Set(profile?.cosmetics.ownedCosmeticIds ?? [])
+  const equippedAvatar = items.find((item) => item.id === profile?.cosmetics.avatarId)
+  const equippedFrame = items.find((item) => item.id === profile?.cosmetics.frameId)
 
   async function buy(item: ShopItem) {
     setBusyItemID(item.id)
@@ -173,6 +176,20 @@ export function ShopView() {
                     <span className="max-w-full truncate text-xs font-medium">{profile.user.username}</span>
                     <TitleBadge name={item.displayName} price={item.price} />
                   </div>
+                ) : item.type === 'avatar' ? (
+                  <AvatarFrame
+                    src={avatarImagePath(item.presentation.assetKey)}
+                    fallback={item.presentation.emoji}
+                    frame={equippedFrame?.presentation.cssClass}
+                    size="lg"
+                  />
+                ) : item.type === 'frame' ? (
+                  <AvatarFrame
+                    src={avatarImagePath(equippedAvatar?.presentation.assetKey)}
+                    fallback={equippedAvatar?.presentation.emoji}
+                    frame={item.presentation.cssClass}
+                    size="lg"
+                  />
                 ) : item.presentation.emoji ? (
                   <span className="text-4xl" aria-hidden="true">{item.presentation.emoji}</span>
                 ) : (

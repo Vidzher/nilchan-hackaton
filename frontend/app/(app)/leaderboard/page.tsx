@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { cosmeticName, cosmeticPreview } from '@/lib/cosmetics'
-import { AvatarFrame } from '@/components/avatar-frame'
+import { AvatarFrame, avatarImagePath } from '@/components/avatar-frame'
 import { TitleBadge } from '@/components/title-badge'
 import { api, ApiError, type LeaderboardEntry, type ShopItem } from '@/lib/api'
 
@@ -64,6 +63,8 @@ export default function LeaderboardPage() {
         ) : entries.length ? (
           <ul>
             {entries.map((row) => {
+              const avatar = catalog.find((item) => item.id === row.avatarId)
+              const frame = catalog.find((item) => item.id === row.frameId)
               const title = catalog.find((item) => item.id === row.titleId)
               const showcase = catalog.find((item) => item.id === row.showcaseItemId)
               return (
@@ -79,7 +80,7 @@ export default function LeaderboardPage() {
                   </span>
 
                   <div className="flex min-w-0 items-center gap-3">
-                    <AvatarFrame emoji={cosmeticPreview(row.avatarId)} frame={cosmeticName(row.frameId)} size="sm" />
+                    <AvatarFrame src={avatarImagePath(avatar?.presentation.assetKey)} fallback={avatar?.presentation.emoji} frame={frame?.presentation.cssClass} size="sm" />
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 truncate text-sm font-medium">
                         {row.username}

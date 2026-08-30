@@ -10,10 +10,6 @@ const cosmetics: Record<string, { name: string; preview?: string }> = {
   title_razgreshatel: { name: 'Разгребатель' },
   title_knowledge_goblin: { name: 'Knowledge Goblin' },
   title_backlog_destroyer: { name: 'Backlog Destroyer' },
-  showcase_rubber_duck: { name: 'Senior Rubber Duck', preview: '🦆' },
-  showcase_cactus: { name: 'Кактус прокрастинации', preview: '🌵' },
-  showcase_cat: { name: 'Кот', preview: '🐈' },
-  showcase_golden_duck: { name: 'Golden Duck', preview: '👑' },
 }
 
 export function cosmeticName(id?: string) {

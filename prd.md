@@ -478,8 +478,8 @@ Streak обновляется только после успешного complet
 │                        │
 │    Backlog Destroyer   │
 │                        │
-│           🦆           │
-│   Senior Rubber Duck   │
+│           ▮            │
+│        Монолит         │
 │                        │
 │ Level 4 · 820 XP       │
 │ 🔥 9 дней              │
@@ -518,10 +518,15 @@ showcaseItemId?: string
 | Разгребатель             | Title    |   20 |
 | Knowledge Goblin         | Title    |   40 |
 | Backlog Destroyer        | Title    |   70 |
-| 🦆 Senior Rubber Duck    | Showcase |   40 |
-| 🌵 Кактус прокрастинации | Showcase |   55 |
-| 🐈 Кот                   | Showcase |  120 |
-| 👑 Golden Duck           | Showcase |  250 |
+| `.env` с прода                  | Showcase |   25 |
+| Зелёный CI                      | Showcase |   35 |
+| Ответ со Stack Overflow, 2009   | Showcase |   50 |
+| Стикер «I use Arch btw»         | Showcase |   70 |
+| `AGENTS.md`                     | Showcase |   90 |
+| Монолит                         | Showcase |  120 |
+| Курс Евгения Пантелы            | Showcase |  150 |
+| Лицензия WinRAR                 | Showcase |  200 |
+| Котлы генеральские              | Showcase |  250 |
 
 Cosmetics покупаются навсегда и могут свободно экипироваться. Purchase выполняется в одной transaction: backend берёт цену из hardcoded catalog, проверяет `ePoints`, списывает е-баллы и добавляет cosmetic. Повторная покупка owned cosmetic возвращает `409 ALREADY_OWNED`. Equip разрешён только для owned cosmetic соответствующего type.
 

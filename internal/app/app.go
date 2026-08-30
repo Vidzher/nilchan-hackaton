@@ -18,6 +18,7 @@ import (
 	quizgen "nilchan-hackaton/internal/quiz/gen"
 	"nilchan-hackaton/internal/resource"
 	resourcerepo "nilchan-hackaton/internal/resource/repository"
+	"nilchan-hackaton/internal/shop"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -104,7 +105,10 @@ func New(cfg *config.Config) (*App, error) {
 	profileService := profile.NewService(profileRepo)
 	profileHandler := profile.NewHandler(profileService, validate)
 
-	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler)
+	shopService := shop.NewService()
+	shopHandler := shop.NewHandler(shopService)
+
+	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler)
 
 	return a, nil
 }
@@ -163,6 +167,7 @@ func (a *App) registerRoutes(
 	resourceHandler *resource.Handler,
 	quizHandler *quiz.Handler,
 	profileHandler *profile.Handler,
+	shopHandler *shop.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
 		r.Use(middleware.RequestID)
@@ -181,6 +186,7 @@ func (a *App) registerRoutes(
 			r.Post("/resources/{resourceID}/quiz/complete", quizHandler.HandleComplete())
 			r.Get("/profile", profileHandler.HandleGet())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
+			r.Get("/shop", shopHandler.HandleList())
 		})
 	})
 }

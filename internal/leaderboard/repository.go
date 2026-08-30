@@ -27,11 +27,13 @@ func (r *Repository) List(ctx context.Context, currentUserID int64) ([]Entry, er
 				u.username,
 				p.xp,
 				p.avatar_id,
-				p.frame_id
+				p.frame_id,
+				p.title_id,
+				p.showcase_item_id
 			FROM users u
 			JOIN user_progress p ON p.user_id = u.id
 		)
-		SELECT rank, id, username, xp, avatar_id, frame_id
+		SELECT rank, id, username, xp, avatar_id, frame_id, title_id, showcase_item_id
 		FROM ranked
 		WHERE rank <= ? OR id = ?
 		ORDER BY rank
@@ -51,6 +53,8 @@ func (r *Repository) List(ctx context.Context, currentUserID int64) ([]Entry, er
 			&entry.XP,
 			&entry.AvatarID,
 			&entry.FrameID,
+			&entry.TitleID,
+			&entry.ShowcaseItemID,
 		); err != nil {
 			return nil, fmt.Errorf("scan leaderboard entry: %w", err)
 		}

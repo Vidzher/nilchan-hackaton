@@ -41,14 +41,16 @@ func (h *Handler) HandleList() http.HandlerFunc {
 		result := make([]EntryResponse, len(entries))
 		for index, entry := range entries {
 			result[index] = EntryResponse{
-				Rank:      entry.Rank,
-				UserID:    entry.UserID,
-				Username:  entry.Username,
-				XP:        entry.XP,
-				Level:     entry.Level,
-				AvatarID:  entry.AvatarID,
-				FrameID:   entry.FrameID,
-				IsCurrent: entry.IsCurrent,
+				Rank:           entry.Rank,
+				UserID:         entry.UserID,
+				Username:       entry.Username,
+				XP:             entry.XP,
+				Level:          entry.Level,
+				AvatarID:       entry.AvatarID,
+				FrameID:        entry.FrameID,
+				TitleID:        entry.TitleID,
+				ShowcaseItemID: entry.ShowcaseItemID,
+				IsCurrent:      entry.IsCurrent,
 			}
 		}
 		response.RenderJSON(w, r, http.StatusOK, response.OK(result))

@@ -113,30 +113,93 @@ var catalog = []Item{
 		},
 	},
 	{
-		ID:          "title_razgreshatel",
+		ID:          "title_vkatun",
 		Type:        ItemTypeTitle,
-		DisplayName: "Разгребатель",
+		DisplayName: "Вкатун",
 		Price:       20,
 		Presentation: Presentation{
-			AssetKey: "title-razgreshatel",
+			AssetKey: "title-vkatun",
 		},
 	},
 	{
-		ID:          "title_knowledge_goblin",
+		ID:          "title_factory_worker",
 		Type:        ItemTypeTitle,
-		DisplayName: "Knowledge Goblin",
+		DisplayName: "Заводчанин",
+		Price:       30,
+		Presentation: Presentation{
+			AssetKey: "title-factory-worker",
+		},
+	},
+	{
+		ID:          "title_1c_developer",
+		Type:        ItemTypeTitle,
+		DisplayName: "1Сник",
+		Price:       35,
+		Presentation: Presentation{
+			AssetKey: "title-1c-developer",
+		},
+	},
+	{
+		ID:          "title_insider",
+		Type:        ItemTypeTitle,
+		DisplayName: "Инсайдер",
 		Price:       40,
 		Presentation: Presentation{
-			AssetKey: "title-knowledge-goblin",
+			AssetKey: "title-insider",
 		},
 	},
 	{
-		ID:          "title_backlog_destroyer",
+		ID:          "title_vibe_coder",
 		Type:        ItemTypeTitle,
-		DisplayName: "Backlog Destroyer",
+		DisplayName: "Вайбкодер",
+		Price:       50,
+		Presentation: Presentation{
+			AssetKey: "title-vibe-coder",
+		},
+	},
+	{
+		ID:          "title_top_1_pisa",
+		Type:        ItemTypeTitle,
+		DisplayName: "Топ-1 в писе",
 		Price:       70,
 		Presentation: Presentation{
-			AssetKey: "title-backlog-destroyer",
+			AssetKey: "title-top-1-pisa",
+		},
+	},
+	{
+		ID:          "title_pogromist",
+		Type:        ItemTypeTitle,
+		DisplayName: "Погромист",
+		Price:       90,
+		Presentation: Presentation{
+			AssetKey: "title-pogromist",
+		},
+	},
+	{
+		ID:          "title_middle",
+		Type:        ItemTypeTitle,
+		DisplayName: "Мидл",
+		Price:       120,
+		Presentation: Presentation{
+			AssetKey: "title-middle",
+		},
+	},
+	{
+		ID:          "title_infogypsy",
+		Type:        ItemTypeTitle,
+		DisplayName: "Инфоцыган",
+		Price:       150,
+		Presentation: Presentation{
+			AssetKey: "title-infogypsy",
+		},
+	},
+	{
+		ID:          "title_senior",
+		Type:        ItemTypeTitle,
+		DisplayName: "Синьор",
+		Price:       200,
+		Presentation: Presentation{
+			AssetKey: "title-senior",
 		},
 	},
 	{

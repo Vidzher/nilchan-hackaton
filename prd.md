@@ -503,7 +503,7 @@ showcaseItemId?: string
 
 Магазин нужен, чтобы заработок е-баллов имел понятную цель.
 
-Каталог для MVP **hardcoded**, без admin panel и CRUD. Достаточно 10–15 items.
+Каталог для MVP **hardcoded**, без admin panel и CRUD.
 
 ### Пример каталога
 
@@ -515,9 +515,16 @@ showcaseItemId?: string
 | Neon                     | Frame    |   30 |
 | Fire                     | Frame    |   50 |
 | Gold                     | Frame    |  120 |
-| Разгребатель             | Title    |   20 |
-| Knowledge Goblin         | Title    |   40 |
-| Backlog Destroyer        | Title    |   70 |
+| Вкатун                          | Title    |   20 |
+| Заводчанин                      | Title    |   30 |
+| 1Сник                           | Title    |   35 |
+| Инсайдер                        | Title    |   40 |
+| Вайбкодер                       | Title    |   50 |
+| Топ-1 в писе                    | Title    |   70 |
+| Погромист                       | Title    |   90 |
+| Мидл                            | Title    |  120 |
+| Инфоцыган                       | Title    |  150 |
+| Синьор                          | Title    |  200 |
 | `.env` с прода                  | Showcase |   25 |
 | Зелёный CI                      | Showcase |   35 |
 | Ответ со Stack Overflow, 2009   | Showcase |   50 |
@@ -584,7 +591,7 @@ ORDER BY xp DESC
 18. 🐱 you       Lv.5   1320 XP
 ```
 
-Leaderboard использует avatar и frame пользователя. При открытии профиля можно увидеть title и showcase item. Для стабильного порядка ties сортируются по `xp DESC, userId ASC`.
+Leaderboard использует avatar, frame, title и showcase item пользователя. Для стабильного порядка ties сортируются по `xp DESC, userId ASC`.
 
 Leaderboard не выдаёт дополнительных rewards.
 

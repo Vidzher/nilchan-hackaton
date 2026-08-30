@@ -13,6 +13,8 @@
 # Go build and test artifacts
 /bin/
 /dist/
+/internal/frontend/dist/*
+!/internal/frontend/dist/.keep
 *.test
 *.out
 coverage.*

@@ -10,6 +10,7 @@ import (
 
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
+	"nilchan-hackaton/internal/frontend"
 	"nilchan-hackaton/internal/httpapi/validation"
 	"nilchan-hackaton/internal/leaderboard"
 	"nilchan-hackaton/internal/llm"
@@ -115,6 +116,14 @@ func New(cfg *config.Config) (*App, error) {
 	leaderboardHandler := leaderboard.NewHandler(leaderboardService)
 
 	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler, leaderboardHandler)
+
+	frontendHandler, err := frontend.Handler()
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("initialize frontend: %w", err)
+	}
+	a.router.Handle("/", frontendHandler)
+	a.router.Handle("/*", frontendHandler)
 
 	return a, nil
 }

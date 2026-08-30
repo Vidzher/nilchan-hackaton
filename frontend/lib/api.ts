@@ -115,6 +115,8 @@ export type LeaderboardEntry = {
   level: number
   avatarId: string
   frameId: string
+  titleId?: string
+  showcaseItemId?: string
   isCurrent: boolean
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Coins, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TitleBadge } from '@/components/title-badge'
 import { cn } from '@/lib/utils'
 import {
   api,
@@ -167,7 +168,12 @@ export function ShopView() {
               </div>
 
               <div className="mt-3 grid h-20 place-items-center rounded-lg bg-background">
-                {item.presentation.emoji ? (
+                {item.type === 'title' ? (
+                  <div className="flex max-w-full flex-col items-center gap-1.5 px-2">
+                    <span className="max-w-full truncate text-xs font-medium">{profile.user.username}</span>
+                    <TitleBadge name={item.displayName} price={item.price} />
+                  </div>
+                ) : item.presentation.emoji ? (
                   <span className="text-4xl" aria-hidden="true">{item.presentation.emoji}</span>
                 ) : (
                   <span className="px-2 text-center text-sm font-semibold text-pretty">{item.displayName}</span>

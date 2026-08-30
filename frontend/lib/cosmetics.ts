@@ -7,9 +7,6 @@ const cosmetics: Record<string, { name: string; preview?: string }> = {
   frame_neon: { name: 'Neon' },
   frame_fire: { name: 'Fire' },
   frame_gold: { name: 'Gold' },
-  title_razgreshatel: { name: 'Разгребатель' },
-  title_knowledge_goblin: { name: 'Knowledge Goblin' },
-  title_backlog_destroyer: { name: 'Backlog Destroyer' },
 }
 
 export function cosmeticName(id?: string) {

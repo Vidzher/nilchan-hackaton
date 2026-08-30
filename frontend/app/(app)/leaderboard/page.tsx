@@ -5,7 +5,8 @@ import { Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { cosmeticName, cosmeticPreview } from '@/lib/cosmetics'
 import { AvatarFrame } from '@/components/avatar-frame'
-import { api, ApiError, type LeaderboardEntry } from '@/lib/api'
+import { TitleBadge } from '@/components/title-badge'
+import { api, ApiError, type LeaderboardEntry, type ShopItem } from '@/lib/api'
 
 function rankStyle(rank: number) {
   if (rank === 1) return 'bg-[#f2ead4] text-[#8a6a12]'
@@ -16,15 +17,17 @@ function rankStyle(rank: number) {
 
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [catalog, setCatalog] = useState<ShopItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    api.leaderboard()
-      .then((result) => {
+    Promise.all([api.leaderboard(), api.shop()])
+      .then(([result, shopItems]) => {
         if (!active) return
         setEntries(result)
+        setCatalog(shopItems)
         setError(null)
       })
       .catch((caught) => {
@@ -60,37 +63,52 @@ export default function LeaderboardPage() {
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">Загружаем рейтинг…</p>
         ) : entries.length ? (
           <ul>
-            {entries.map((row) => (
-              <li
-                key={row.userId}
-                className={cn(
-                  'grid grid-cols-[2.25rem_1fr_auto] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 sm:grid-cols-[3rem_1fr_5rem_6rem] sm:gap-4',
-                  row.isCurrent && 'bg-brand-soft/50',
-                )}
-              >
-                <span className={cn('tabular grid size-8 place-items-center rounded-full text-sm font-semibold', rankStyle(row.rank))}>
-                  {row.rank}
-                </span>
+            {entries.map((row) => {
+              const title = catalog.find((item) => item.id === row.titleId)
+              const showcase = catalog.find((item) => item.id === row.showcaseItemId)
+              return (
+                <li
+                  key={row.userId}
+                  className={cn(
+                    'grid grid-cols-[2.25rem_1fr_auto] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 sm:grid-cols-[3rem_1fr_5rem_6rem] sm:gap-4',
+                    row.isCurrent && 'bg-brand-soft/50',
+                  )}
+                >
+                  <span className={cn('tabular grid size-8 place-items-center rounded-full text-sm font-semibold', rankStyle(row.rank))}>
+                    {row.rank}
+                  </span>
 
-                <div className="flex min-w-0 items-center gap-3">
-                  <AvatarFrame emoji={cosmeticPreview(row.avatarId)} frame={cosmeticName(row.frameId)} size="sm" />
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 truncate text-sm font-medium">
-                      {row.username}
-                      {row.isCurrent ? (
-                        <span className="rounded bg-[color:var(--brand)] px-1.5 py-0.5 text-[10px] font-semibold text-white">Вы</span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <AvatarFrame emoji={cosmeticPreview(row.avatarId)} frame={cosmeticName(row.frameId)} size="sm" />
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 truncate text-sm font-medium">
+                        {row.username}
+                        {row.isCurrent ? (
+                          <span className="rounded bg-[color:var(--brand)] px-1.5 py-0.5 text-[10px] font-semibold text-white">Вы</span>
+                        ) : null}
+                      </p>
+                      {title || showcase ? (
+                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                          {title ? <TitleBadge name={title.displayName} price={title.price} /> : null}
+                          {showcase ? (
+                            <span className="inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] leading-4 text-muted-foreground">
+                              <span aria-hidden="true">{showcase.presentation.emoji}</span>
+                              <span className="truncate">{showcase.displayName}</span>
+                            </span>
+                          ) : null}
+                        </div>
                       ) : null}
-                    </p>
-                    <p className="text-xs text-muted-foreground sm:hidden">
-                      Ур. {row.level} · {row.xp.toLocaleString('ru-RU')} XP
-                    </p>
+                      <p className="mt-1 text-xs text-muted-foreground sm:hidden">
+                        Ур. {row.level} · {row.xp.toLocaleString('ru-RU')} XP
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <span className="tabular hidden text-right text-sm text-muted-foreground sm:block">{row.level}</span>
-                <span className="tabular hidden text-right text-sm font-semibold sm:block">{row.xp.toLocaleString('ru-RU')}</span>
-              </li>
-            ))}
+                  <span className="tabular hidden text-right text-sm text-muted-foreground sm:block">{row.level}</span>
+                  <span className="tabular hidden text-right text-sm font-semibold sm:block">{row.xp.toLocaleString('ru-RU')}</span>
+                </li>
+              )
+            })}
           </ul>
         ) : (
           <div className="flex flex-col items-center px-4 py-12 text-center text-sm text-muted-foreground">

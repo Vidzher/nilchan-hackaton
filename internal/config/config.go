@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,7 +13,7 @@ import (
 
 type Config struct {
 	Env         string     `yaml:"env" env-default:"local"`
-	StoragePath string     `yaml:"storage_path" env-required:"true"`
+	StoragePath string     `yaml:"storage_path" env:"STORAGE_PATH" env-required:"true"`
 	HTTPServer  HTTPServer `yaml:"http_server" env-required:"true"`
 	Firecrawl   Firecrawl  `yaml:"firecrawl"`
 	OpenRouter  OpenRouter `yaml:"openrouter"`
@@ -29,7 +31,7 @@ type OpenRouter struct {
 }
 
 type HTTPServer struct {
-	Address         string        `yaml:"address" env-default:"localhost:8080"`
+	Address         string        `yaml:"address" env:"HTTP_ADDRESS" env-default:"0.0.0.0:8080"`
 	Timeout         time.Duration `yaml:"timeout" env-default:"40s"`
 	IdleTimeout     time.Duration `yaml:"idle_timeout" env-default:"60s"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env-default:"10s"`
@@ -49,6 +51,10 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := cleanenv.ReadConfig(absolutePath, &cfg); err != nil {
 		return nil, fmt.Errorf("read config %s: %w", absolutePath, err)
+	}
+
+	if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
+		cfg.HTTPServer.Address = net.JoinHostPort("0.0.0.0", port)
 	}
 
 	if cfg.StoragePath != "" && cfg.StoragePath != ":memory:" && !filepath.IsAbs(cfg.StoragePath) && !strings.HasPrefix(cfg.StoragePath, "file:") {

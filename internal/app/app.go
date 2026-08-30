@@ -116,6 +116,9 @@ func New(cfg *config.Config) (*App, error) {
 	leaderboardHandler := leaderboard.NewHandler(leaderboardService)
 
 	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler, leaderboardHandler)
+	a.router.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	frontendHandler, err := frontend.Handler()
 	if err != nil {

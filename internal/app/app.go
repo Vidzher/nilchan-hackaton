@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 
 	"nilchan-hackaton/internal/auth"
 	"nilchan-hackaton/internal/config"
 	"nilchan-hackaton/internal/httpapi/validation"
+	"nilchan-hackaton/internal/leaderboard"
 	"nilchan-hackaton/internal/llm"
 	"nilchan-hackaton/internal/parser"
 	"nilchan-hackaton/internal/profile"
@@ -16,6 +19,7 @@ import (
 	quizgen "nilchan-hackaton/internal/quiz/gen"
 	"nilchan-hackaton/internal/resource"
 	resourcerepo "nilchan-hackaton/internal/resource/repository"
+	"nilchan-hackaton/internal/shop"
 	"nilchan-hackaton/internal/storage"
 
 	"github.com/go-chi/chi/v5"
@@ -77,6 +81,15 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("initialize quiz generator: %w", err)
 	}
 	resourceRepo := resourcerepo.New(store)
+	recovered, err := resourceRepo.RecoverProcessing(context.Background())
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("recover interrupted resource processing: %w", err)
+	}
+	if recovered > 0 {
+		fmt.Printf("recovered %d interrupted processing resources\n", recovered)
+	}
+
 	a.resourceProcessor = resource.NewProcessor(resourceRepo, quizGenerator)
 	resourceService := resource.NewService(
 		resourceRepo,
@@ -93,7 +106,15 @@ func New(cfg *config.Config) (*App, error) {
 	profileService := profile.NewService(profileRepo)
 	profileHandler := profile.NewHandler(profileService, validate)
 
-	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler)
+	shopRepo := shop.NewRepository(store)
+	shopService := shop.NewService(shopRepo)
+	shopHandler := shop.NewHandler(shopService, validate)
+
+	leaderboardRepo := leaderboard.NewRepository(store)
+	leaderboardService := leaderboard.NewService(leaderboardRepo)
+	leaderboardHandler := leaderboard.NewHandler(leaderboardService)
+
+	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler, leaderboardHandler)
 
 	return a, nil
 }
@@ -107,9 +128,15 @@ func (a *App) Run(ctx context.Context) error {
 		IdleTimeout:  a.cfg.HTTPServer.IdleTimeout,
 	}
 
+	listener, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		return fmt.Errorf("listen HTTP: %w", err)
+	}
+	log.Printf("HTTP server started on %s", listener.Addr())
+
 	serverErrors := make(chan error, 1)
 	go func() {
-		serverErrors <- srv.ListenAndServe()
+		serverErrors <- srv.Serve(listener)
 	}()
 
 	select {
@@ -146,11 +173,11 @@ func (a *App) registerRoutes(
 	resourceHandler *resource.Handler,
 	quizHandler *quiz.Handler,
 	profileHandler *profile.Handler,
+	shopHandler *shop.Handler,
+	leaderboardHandler *leaderboard.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
-		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
-		r.Use(middleware.Recoverer)
 
 		r.Post("/login", authHandler.HandleLogin())
 		r.Post("/register", authHandler.HandleRegister())
@@ -164,6 +191,9 @@ func (a *App) registerRoutes(
 			r.Post("/resources/{resourceID}/quiz/complete", quizHandler.HandleComplete())
 			r.Get("/profile", profileHandler.HandleGet())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
+			r.Get("/shop", shopHandler.HandleList())
+			r.Post("/shop/purchase", shopHandler.HandlePurchase())
+			r.Get("/leaderboard", leaderboardHandler.HandleList())
 		})
 	})
 }

@@ -78,7 +78,7 @@ func (g *Generator) Generate(ctx context.Context, request GenerationRequest) (*G
 			continue
 		}
 
-		if err := validateGeneratedQuiz(response, request.SourceText); err != nil {
+		if err := validateGeneratedQuiz(response); err != nil {
 			lastErr = err
 			continue
 		}

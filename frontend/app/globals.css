@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+}
+
+:root {
+  color-scheme: light;
+
+  --background: #f8f5ef;
+  --foreground: #211b17;
+
+  --card: #fffdfa;
+  --card-foreground: #211b17;
+
+  --popover: #fffdfa;
+  --popover-foreground: #211b17;
+
+  --primary: #c44f28;
+  --primary-foreground: #ffffff;
+
+  --secondary: #eee8de;
+  --secondary-foreground: #2d241f;
+
+  --muted: #eee8de;
+  --muted-foreground: #71685f;
+
+  --accent: #f3e9df;
+  --accent-foreground: #2d241f;
+
+  --destructive: #b83a3a;
+  --destructive-foreground: #ffffff;
+
+  --border: #ded7cc;
+  --input: #d8d0c4;
+  --ring: #c44f28;
+
+  --brand: #c44f28;
+  --brand-foreground: #ffffff;
+  --brand-soft: #f8e2d8;
+
+  --success: #287a52;
+  --success-soft: #e4efe9;
+
+  --warning: #a46a12;
+  --warning-soft: #f4ecdd;
+
+  --radius: 8px;
+
+  --sidebar: #fcfaf6;
+  --sidebar-foreground: #211b17;
+  --sidebar-border: #ded7cc;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 88% 4%, rgb(196 79 40 / 0.07), transparent 22rem),
+      radial-gradient(circle at 16% 92%, rgb(40 122 82 / 0.05), transparent 26rem);
+    background-attachment: fixed;
+  }
+  /* Tabular numbers for XP, balances, ranking */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}

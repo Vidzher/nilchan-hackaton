@@ -33,18 +33,17 @@ var catalog = []Item{
 	{
 		ID:          DefaultAvatarID,
 		Type:        ItemTypeAvatar,
-		DisplayName: "Default Avatar",
+		DisplayName: "Нормис",
 		Price:       0,
 		Free:        true,
 		Presentation: Presentation{
-			Emoji:    "🙂",
-			AssetKey: "avatar-default",
+			Emoji: "🙂",
 		},
 	},
 	{
 		ID:          DefaultFrameID,
 		Type:        ItemTypeFrame,
-		DisplayName: "Default Frame",
+		DisplayName: "Без рамки",
 		Price:       0,
 		Free:        true,
 		Presentation: Presentation{
@@ -53,39 +52,119 @@ var catalog = []Item{
 		},
 	},
 	{
-		ID:          "avatar_frog",
+		ID:          "avatar_vkatun",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Frog",
+		DisplayName: "Вкатун",
 		Price:       15,
 		Presentation: Presentation{
-			Emoji:    "🐸",
-			AssetKey: "avatar-frog",
+			Emoji:    "🛒",
+			AssetKey: "avatar-vkatun",
 		},
 	},
 	{
-		ID:          "avatar_robot",
+		ID:          "avatar_zhabych",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Robot",
+		DisplayName: "Жабыч",
+		Price:       20,
+		Presentation: Presentation{
+			Emoji:    "🐸",
+			AssetKey: "avatar-zhabych",
+		},
+	},
+	{
+		ID:          "avatar_rabotyaga",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Работяга",
 		Price:       25,
 		Presentation: Presentation{
-			Emoji:    "🤖",
-			AssetKey: "avatar-robot",
+			Emoji:    "👨",
+			AssetKey: "avatar-rabotyaga",
 		},
 	},
 	{
-		ID:          "avatar_wizard",
+		ID:          "avatar_doomer",
 		Type:        ItemTypeAvatar,
-		DisplayName: "Wizard",
+		DisplayName: "Думерок",
+		Price:       30,
+		Presentation: Presentation{
+			Emoji:    "🌑",
+			AssetKey: "avatar-doomer",
+		},
+	},
+	{
+		ID:          "avatar_okakych",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Окакыч",
+		Price:       35,
+		Presentation: Presentation{
+			Emoji:    "🐱",
+			AssetKey: "avatar-okakych",
+		},
+	},
+	{
+		ID:          "avatar_kabanych",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Кабаныч",
 		Price:       40,
 		Presentation: Presentation{
-			Emoji:    "🧙",
-			AssetKey: "avatar-wizard",
+			Emoji:    "🐗",
+			AssetKey: "avatar-kabanych",
+		},
+	},
+	{
+		ID:          "avatar_gopher",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Гофер Галерный",
+		Price:       50,
+		Presentation: Presentation{
+			Emoji:    "🐹",
+			AssetKey: "avatar-gopher",
+		},
+	},
+	{
+		ID:          "avatar_neurofruit",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Нейрофрукт",
+		Price:       60,
+		Presentation: Presentation{
+			Emoji:    "🍊",
+			AssetKey: "avatar-neurofruit",
+		},
+	},
+	{
+		ID:          "avatar_greatest",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Величайший",
+		Price:       80,
+		Presentation: Presentation{
+			Emoji:    "🎮",
+			AssetKey: "avatar-greatest",
+		},
+	},
+	{
+		ID:          "avatar_basovik",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Базовик",
+		Price:       120,
+		Presentation: Presentation{
+			Emoji:    "🗿",
+			AssetKey: "avatar-basovik",
+		},
+	},
+	{
+		ID:          "avatar_islander",
+		Type:        ItemTypeAvatar,
+		DisplayName: "Островитянин",
+		Price:       150,
+		Presentation: Presentation{
+			Emoji:    "🏝️",
+			AssetKey: "avatar-islander",
 		},
 	},
 	{
 		ID:          "frame_neon",
 		Type:        ItemTypeFrame,
-		DisplayName: "Neon",
+		DisplayName: "Неоновая",
 		Price:       30,
 		Presentation: Presentation{
 			AssetKey: "frame-neon",
@@ -95,7 +174,7 @@ var catalog = []Item{
 	{
 		ID:          "frame_fire",
 		Type:        ItemTypeFrame,
-		DisplayName: "Fire",
+		DisplayName: "Горящий прод",
 		Price:       50,
 		Presentation: Presentation{
 			AssetKey: "frame-fire",
@@ -105,7 +184,7 @@ var catalog = []Item{
 	{
 		ID:          "frame_gold",
 		Type:        ItemTypeFrame,
-		DisplayName: "Gold",
+		DisplayName: "Золотой релиз",
 		Price:       120,
 		Presentation: Presentation{
 			AssetKey: "frame-gold",
@@ -113,70 +192,183 @@ var catalog = []Item{
 		},
 	},
 	{
-		ID:          "title_razgreshatel",
+		ID:          "title_vkatun",
 		Type:        ItemTypeTitle,
-		DisplayName: "Разгребатель",
+		DisplayName: "Вкатун",
 		Price:       20,
 		Presentation: Presentation{
-			AssetKey: "title-razgreshatel",
+			AssetKey: "title-vkatun",
 		},
 	},
 	{
-		ID:          "title_knowledge_goblin",
+		ID:          "title_factory_worker",
 		Type:        ItemTypeTitle,
-		DisplayName: "Knowledge Goblin",
+		DisplayName: "Заводчанин",
+		Price:       30,
+		Presentation: Presentation{
+			AssetKey: "title-factory-worker",
+		},
+	},
+	{
+		ID:          "title_1c_developer",
+		Type:        ItemTypeTitle,
+		DisplayName: "1Сник",
+		Price:       35,
+		Presentation: Presentation{
+			AssetKey: "title-1c-developer",
+		},
+	},
+	{
+		ID:          "title_insider",
+		Type:        ItemTypeTitle,
+		DisplayName: "Инсайдер",
 		Price:       40,
 		Presentation: Presentation{
-			AssetKey: "title-knowledge-goblin",
+			AssetKey: "title-insider",
 		},
 	},
 	{
-		ID:          "title_backlog_destroyer",
+		ID:          "title_vibe_coder",
 		Type:        ItemTypeTitle,
-		DisplayName: "Backlog Destroyer",
+		DisplayName: "Вайбкодер",
+		Price:       50,
+		Presentation: Presentation{
+			AssetKey: "title-vibe-coder",
+		},
+	},
+	{
+		ID:          "title_top_1_pisa",
+		Type:        ItemTypeTitle,
+		DisplayName: "Топ-1 в писе",
 		Price:       70,
 		Presentation: Presentation{
-			AssetKey: "title-backlog-destroyer",
+			AssetKey: "title-top-1-pisa",
 		},
 	},
 	{
-		ID:          "showcase_rubber_duck",
-		Type:        ItemTypeShowcase,
-		DisplayName: "Senior Rubber Duck",
-		Price:       40,
+		ID:          "title_pogromist",
+		Type:        ItemTypeTitle,
+		DisplayName: "Погромист",
+		Price:       90,
 		Presentation: Presentation{
-			Emoji:    "🦆",
-			AssetKey: "showcase-rubber-duck",
+			AssetKey: "title-pogromist",
 		},
 	},
 	{
-		ID:          "showcase_cactus",
-		Type:        ItemTypeShowcase,
-		DisplayName: "Кактус прокрастинации",
-		Price:       55,
-		Presentation: Presentation{
-			Emoji:    "🌵",
-			AssetKey: "showcase-cactus",
-		},
-	},
-	{
-		ID:          "showcase_cat",
-		Type:        ItemTypeShowcase,
-		DisplayName: "Кот",
+		ID:          "title_middle",
+		Type:        ItemTypeTitle,
+		DisplayName: "Мидл",
 		Price:       120,
 		Presentation: Presentation{
-			Emoji:    "🐈",
-			AssetKey: "showcase-cat",
+			AssetKey: "title-middle",
 		},
 	},
 	{
-		ID:          "showcase_golden_duck",
+		ID:          "title_infogypsy",
+		Type:        ItemTypeTitle,
+		DisplayName: "Инфоцыган",
+		Price:       150,
+		Presentation: Presentation{
+			AssetKey: "title-infogypsy",
+		},
+	},
+	{
+		ID:          "title_senior",
+		Type:        ItemTypeTitle,
+		DisplayName: "Синьор",
+		Price:       200,
+		Presentation: Presentation{
+			AssetKey: "title-senior",
+		},
+	},
+	{
+		ID:          "showcase_prod_env",
 		Type:        ItemTypeShowcase,
-		DisplayName: "Golden Duck",
+		DisplayName: ".env с прода",
+		Price:       25,
+		Presentation: Presentation{
+			Emoji:    "🔐",
+			AssetKey: "showcase-prod-env",
+		},
+	},
+	{
+		ID:          "showcase_green_ci",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Зелёный CI",
+		Price:       35,
+		Presentation: Presentation{
+			Emoji:    "✅",
+			AssetKey: "showcase-green-ci",
+		},
+	},
+	{
+		ID:          "showcase_stackoverflow_2009",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Ответ со Stack Overflow, 2009",
+		Price:       50,
+		Presentation: Presentation{
+			Emoji:    "📜",
+			AssetKey: "showcase-stackoverflow-2009",
+		},
+	},
+	{
+		ID:          "showcase_arch_sticker",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Стикер «I use Arch btw»",
+		Price:       70,
+		Presentation: Presentation{
+			Emoji:    "👨🏻‍💻",
+			AssetKey: "showcase-arch-sticker",
+		},
+	},
+	{
+		ID:          "showcase_agents_md",
+		Type:        ItemTypeShowcase,
+		DisplayName: "AGENTS.md",
+		Price:       90,
+		Presentation: Presentation{
+			Emoji:    "📄",
+			AssetKey: "showcase-agents-md",
+		},
+	},
+	{
+		ID:          "showcase_monolith",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Монолит",
+		Price:       120,
+		Presentation: Presentation{
+			Emoji:    "🗿",
+			AssetKey: "showcase-monolith",
+		},
+	},
+	{
+		ID:          "showcase_pantela_course",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Курс Евгения Пантелы",
+		Price:       150,
+		Presentation: Presentation{
+			Emoji:    "🤡",
+			AssetKey: "showcase-pantela-course",
+		},
+	},
+	{
+		ID:          "showcase_winrar_license",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Лицензия WinRAR",
+		Price:       200,
+		Presentation: Presentation{
+			Emoji:    "📚",
+			AssetKey: "showcase-winrar-license",
+		},
+	},
+	{
+		ID:          "showcase_general_watch",
+		Type:        ItemTypeShowcase,
+		DisplayName: "Котлы генеральские",
 		Price:       250,
 		Presentation: Presentation{
-			Emoji:    "👑",
-			AssetKey: "showcase-golden-duck",
+			Emoji:    "⌚",
+			AssetKey: "showcase-general-watch",
 		},
 	},
 }

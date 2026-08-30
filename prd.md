@@ -239,7 +239,7 @@ MAX_QUESTIONS = 10
 - иметь правдоподобные distractors;
 - не требовать внешних знаний;
 - содержать непустое короткое `explanation`;
-- содержать непустое `evidence`, чья последовательность слов после приведения к lowercase, удаления punctuation/Markdown-маркеров и нормализации whitespace непрерывно встречается в source content.
+- содержать непустое `evidence`; соответствие `evidence` исходному content backend не проверяет.
 
 Backend отклоняет весь сгенерированный quiz, если вопросов не 5–10, есть дубли вопросов или хотя бы один Question не проходит эти проверки. Порядок Questions определяется их позицией в JSON-массиве, а `totalQuestions` вычисляется как длина массива и отдельно не хранится.
 
@@ -338,7 +338,7 @@ OpenRouter вызывается со следующим structured output contra
 }
 ```
 
-JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов и диапазон `correctIndex`. Для проверки `evidence` backend приводит source и evidence к lowercase, заменяет все символы кроме Unicode letters и numbers на whitespace, нормализует whitespace и требует, чтобы последовательность слов evidence непрерывно встречалась в сохранённом `Resource.content`. Любое нарушение отклоняет весь quiz и считается quiz validation error.
+JSON Schema не заменяет backend validation. После parsing backend нормализует whitespace, проверяет непустые строки и уникальность options, отсутствие дублирующихся вопросов и диапазон `correctIndex`. `evidence` остаётся обязательной непустой строкой, но backend не проверяет, встречается ли она в сохранённом `Resource.content`. Любое нарушение остальных правил отклоняет весь quiz и считается quiz validation error.
 
 ---
 
@@ -358,11 +358,11 @@ correctAnswerHash = SHA-256(
 
 Frontend получает `correctAnswerHash` и `verificationSalt`, вычисляет hash выбранного `selectedIndex` и проверяет ответ локально.
 
-Если ответ неправильный, вопрос остаётся незакрытым и пользователь может попробовать ещё раз.
+Если ответ неправильный, вопрос остаётся незакрытым, frontend фиксирует его для повторения и переходит к следующему вопросу текущего раунда. После завершения раунда начинается новый раунд только с вопросами, на которые пользователь ответил неправильно. Раунды повторяются, пока все вопросы не будут закрыты правильными ответами.
 
-Если правильный — вопрос закрывается, показываются `explanation` и `evidence`.
+Если ответ правильный — вопрос закрывается, показываются `explanation` и `evidence`, после чего пользователь переходит дальше. Неправильный ответ не раскрывает правильный вариант, `explanation` или `evidence`.
 
-Промежуточные ответы на backend не отправляются. Для сохранения progress после reload можно использовать `localStorage`.
+Промежуточные ответы на backend не отправляются. Для сохранения progress после reload frontend использует `localStorage`: сохраняет правильные ответы, номер и очередь текущего раунда, позицию и список вопросов для повторения. Выбранный, но ещё не проверенный вариант и кратковременный экран результата не сохраняются.
 
 Hash не является защитой от намеренного cheating. Финальным источником истины остаётся backend.
 
@@ -478,8 +478,8 @@ Streak обновляется только после успешного complet
 │                        │
 │    Backlog Destroyer   │
 │                        │
-│           🦆           │
-│   Senior Rubber Duck   │
+│           ▮            │
+│        Монолит         │
 │                        │
 │ Level 4 · 820 XP       │
 │ 🔥 9 дней              │
@@ -503,25 +503,45 @@ showcaseItemId?: string
 
 Магазин нужен, чтобы заработок е-баллов имел понятную цель.
 
-Каталог для MVP **hardcoded**, без admin panel и CRUD. Достаточно 10–15 items.
+Каталог для MVP **hardcoded**, без admin panel и CRUD.
 
 ### Пример каталога
 
 | Item                     | Type     | Цена |
 | ------------------------ | -------- | ---: |
-| 🐸 Frog                  | Avatar   |   15 |
-| 🤖 Robot                 | Avatar   |   25 |
-| 🧙 Wizard                | Avatar   |   40 |
-| Neon                     | Frame    |   30 |
-| Fire                     | Frame    |   50 |
-| Gold                     | Frame    |  120 |
-| Разгребатель             | Title    |   20 |
-| Knowledge Goblin         | Title    |   40 |
-| Backlog Destroyer        | Title    |   70 |
-| 🦆 Senior Rubber Duck    | Showcase |   40 |
-| 🌵 Кактус прокрастинации | Showcase |   55 |
-| 🐈 Кот                   | Showcase |  120 |
-| 👑 Golden Duck           | Showcase |  250 |
+| Вкатун                   | Avatar   |   15 |
+| Жабыч                    | Avatar   |   20 |
+| Работяга                 | Avatar   |   25 |
+| Думерок                  | Avatar   |   30 |
+| Окакыч                   | Avatar   |   35 |
+| Кабаныч                  | Avatar   |   40 |
+| Гофер Галерный           | Avatar   |   50 |
+| Нейрофрукт               | Avatar   |   60 |
+| Величайший               | Avatar   |   80 |
+| Базовик                  | Avatar   |  120 |
+| Островитянин             | Avatar   |  150 |
+| Неоновая                 | Frame    |   30 |
+| Горящий прод             | Frame    |   50 |
+| Золотой релиз            | Frame    |  120 |
+| Вкатун                          | Title    |   20 |
+| Заводчанин                      | Title    |   30 |
+| 1Сник                           | Title    |   35 |
+| Инсайдер                        | Title    |   40 |
+| Вайбкодер                       | Title    |   50 |
+| Топ-1 в писе                    | Title    |   70 |
+| Погромист                       | Title    |   90 |
+| Мидл                            | Title    |  120 |
+| Инфоцыган                       | Title    |  150 |
+| Синьор                          | Title    |  200 |
+| `.env` с прода                  | Showcase |   25 |
+| Зелёный CI                      | Showcase |   35 |
+| Ответ со Stack Overflow, 2009   | Showcase |   50 |
+| Стикер «I use Arch btw»         | Showcase |   70 |
+| `AGENTS.md`                     | Showcase |   90 |
+| Монолит                         | Showcase |  120 |
+| Курс Евгения Пантелы            | Showcase |  150 |
+| Лицензия WinRAR                 | Showcase |  200 |
+| Котлы генеральские              | Showcase |  250 |
 
 Cosmetics покупаются навсегда и могут свободно экипироваться. Purchase выполняется в одной transaction: backend берёт цену из hardcoded catalog, проверяет `ePoints`, списывает е-баллы и добавляет cosmetic. Повторная покупка owned cosmetic возвращает `409 ALREADY_OWNED`. Equip разрешён только для owned cosmetic соответствующего type.
 
@@ -579,7 +599,7 @@ ORDER BY xp DESC
 18. 🐱 you       Lv.5   1320 XP
 ```
 
-Leaderboard использует avatar и frame пользователя. При открытии профиля можно увидеть title и showcase item. Для стабильного порядка ties сортируются по `xp DESC, userId ASC`.
+Leaderboard использует avatar, frame, title и showcase item пользователя. Для стабильного порядка ties сортируются по `xp DESC, userId ASC`.
 
 Leaderboard не выдаёт дополнительных rewards.
 
@@ -610,10 +630,12 @@ Leaderboard не выдаёт дополнительных rewards.
 
 ### Quiz
 
-- `Вопрос N из M`;
-- progress;
+- `Вопрос N из M` в текущем раунде;
+- progress по количеству закрытых правильными ответами вопросов;
 - 4 options;
 - локальный result;
+- переход к следующему вопросу после неправильного ответа;
+- отдельный повторный раунд только с ошибочно отвеченными вопросами;
 - explanation и evidence после правильного ответа.
 
 ### Result

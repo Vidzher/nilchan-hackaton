@@ -104,9 +104,9 @@ export const statusMeta: Record<
   ResourceStatus,
   { label: string; tone: 'brand' | 'warning' | 'error' | 'success' }
 > = {
-  NOT_COMPLETED: { label: 'Quiz готов', tone: 'brand' },
-  PROCESSING: { label: 'Создаём quiz', tone: 'warning' },
-  FAILED: { label: 'Не удалось создать quiz', tone: 'error' },
+  NOT_COMPLETED: { label: 'Квиз готов', tone: 'brand' },
+  PROCESSING: { label: 'Создаём квиз', tone: 'warning' },
+  FAILED: { label: 'Не удалось создать квиз', tone: 'error' },
   COMPLETED: { label: 'Завершено', tone: 'success' },
 }
 

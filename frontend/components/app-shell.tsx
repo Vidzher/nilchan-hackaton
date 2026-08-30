@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AvatarFrame, avatarImagePath } from '@/components/avatar-frame'
+import { BrandMark } from '@/components/brand-assets'
 import { cn } from '@/lib/utils'
 import { api, clearToken, type Profile, type ShopItem } from '@/lib/api'
 
@@ -26,11 +27,12 @@ const navItems: NavItem[] = [
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex items-center gap-2">
-      <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
-        <Layers className="size-4" aria-hidden="true" />
+    <Link href="/" className="group flex items-center gap-2.5" aria-label="Learning Backlog">
+      <BrandMark className="size-7 transition-transform group-hover:-rotate-3" />
+      <span className="leading-none">
+        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--brand)]">Learning</span>
+        <span className="mt-0.5 block text-sm font-bold tracking-tight">Backlog</span>
       </span>
-      <span className="text-sm font-semibold tracking-tight">Learning Backlog</span>
     </Link>
   )
 }
@@ -45,15 +47,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [avatar, setAvatar] = useState<ShopItem | null>(null)
   const [frame, setFrame] = useState<ShopItem | null>(null)
+  const [slotsUsed, setSlotsUsed] = useState(0)
 
   useEffect(() => {
-    Promise.all([api.profile(), api.shop()])
-      .then(([nextProfile, catalog]) => {
-        setProfile(nextProfile)
-        setAvatar(catalog.find((item) => item.id === nextProfile.cosmetics.avatarId) ?? null)
-        setFrame(catalog.find((item) => item.id === nextProfile.cosmetics.frameId) ?? null)
-      })
-      .catch(() => undefined)
+    const loadProfile = () => {
+      Promise.all([api.profile(), api.shop(), api.resources()])
+        .then(([nextProfile, catalog, resources]) => {
+          setProfile(nextProfile)
+          setAvatar(catalog.find((item) => item.id === nextProfile.cosmetics.avatarId) ?? null)
+          setFrame(catalog.find((item) => item.id === nextProfile.cosmetics.frameId) ?? null)
+          setSlotsUsed(resources.filter((resource) => resource.status === 'PROCESSING' || resource.status === 'NOT_COMPLETED').length)
+        })
+        .catch(() => undefined)
+    }
+
+    loadProfile()
+    window.addEventListener('cosmeticschange', loadProfile)
+    window.addEventListener('resourceschange', loadProfile)
+    return () => {
+      window.removeEventListener('cosmeticschange', loadProfile)
+      window.removeEventListener('resourceschange', loadProfile)
+    }
   }, [pathname])
 
   function logout() {
@@ -79,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   active
-                    ? 'bg-secondary text-foreground'
+                    ? 'bg-brand-soft text-[color:var(--brand)]'
                     : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
                 )}
               >
@@ -90,7 +104,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto flex items-center gap-3 rounded-lg border border-border p-2.5">
+        <div className="mb-3 rounded-lg border border-border bg-card/60 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-muted-foreground">Активные слоты</span>
+            <span className="tabular text-xs font-semibold">{slotsUsed} / {profile?.progress.activeBacklogLimit ?? '…'}</span>
+          </div>
+          <div className="mt-2 flex gap-1.5" aria-label={`Занято слотов: ${slotsUsed} из ${profile?.progress.activeBacklogLimit ?? 0}`}>
+            {Array.from({ length: Math.max(slotsUsed, profile?.progress.activeBacklogLimit ?? 0) }, (_, index) => (
+              <span
+                key={index}
+                className={cn(
+                  'size-2.5 rounded-full border',
+                  index < slotsUsed
+                    ? index < (profile?.progress.activeBacklogLimit ?? 0) ? 'border-[color:var(--brand)] bg-[color:var(--brand)]' : 'border-[color:var(--warning)] bg-[color:var(--warning)]'
+                    : 'border-border bg-background',
+                )}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-lg border border-border p-2.5">
           <AvatarFrame
             src={avatarImagePath(avatar?.presentation.assetKey)}
             fallback={avatar?.presentation.emoji}

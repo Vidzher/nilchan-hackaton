@@ -228,15 +228,21 @@ export const api = {
   leaderboard: () => request<LeaderboardEntry[]>('/api/leaderboard'),
   resources: () => request<Resource[]>('/api/resources'),
   resource: (id: number) => request<Resource>(`/api/resources/${id}`),
-  createResource: (url: string, purchaseOverflowSlot: boolean) =>
-    request<Resource>('/api/resources', {
+  createResource: async (url: string, purchaseOverflowSlot: boolean) => {
+    const resource = await request<Resource>('/api/resources', {
       method: 'POST',
       body: JSON.stringify({ url, purchaseOverflowSlot }),
-    }),
+    })
+    window.dispatchEvent(new Event('resourceschange'))
+    return resource
+  },
   quiz: (resourceId: number) => request<Quiz>(`/api/resources/${resourceId}/quiz`),
-  completeQuiz: (resourceId: number, answers: SubmittedAnswer[]) =>
-    request<CompletionResponse>(`/api/resources/${resourceId}/quiz/complete`, {
+  completeQuiz: async (resourceId: number, answers: SubmittedAnswer[]) => {
+    const completion = await request<CompletionResponse>(`/api/resources/${resourceId}/quiz/complete`, {
       method: 'POST',
       body: JSON.stringify({ answers }),
-    }),
+    })
+    window.dispatchEvent(new Event('resourceschange'))
+    return completion
+  },
 }

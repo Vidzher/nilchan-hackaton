@@ -5,6 +5,7 @@ import { Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AvatarFrame, avatarImagePath } from '@/components/avatar-frame'
 import { TitleBadge } from '@/components/title-badge'
+import { PageHeader } from '@/components/primitives'
 import { api, ApiError, type LeaderboardEntry, type ShopItem } from '@/lib/api'
 
 function rankStyle(rank: number) {
@@ -40,17 +41,20 @@ export default function LeaderboardPage() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Рейтинг</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Топ разгребателей backlog по накопленному XP.
-        </p>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Рейтинг"
+        description="Топ разгребателей backlog по накопленному XP."
+      />
 
       {error ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-[color:var(--destructive)]" role="alert">{error}</p> : null}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <section aria-labelledby="leaderboard-heading">
+        <div className="mb-4">
+          <h2 id="leaderboard-heading" className="text-lg font-semibold tracking-tight">Таблица лидеров</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Общий рейтинг по накопленному опыту.</p>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_8px_28px_rgba(86,54,37,0.05)]">
         <div className="hidden grid-cols-[3rem_1fr_5rem_6rem] gap-4 border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid">
           <span>Место</span>
           <span>Игрок</span>
@@ -117,7 +121,8 @@ export default function LeaderboardPage() {
             В рейтинге пока никого нет.
           </div>
         )}
-      </div>
+        </div>
+      </section>
     </div>
   )
 }

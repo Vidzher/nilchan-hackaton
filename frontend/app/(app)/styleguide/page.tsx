@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Field, TextInput } from '@/components/field'
 import { StatusBadge } from '@/components/status-badge'
-import { Tag, ProgressBar } from '@/components/primitives'
+import { PageHeader, Tag, ProgressBar } from '@/components/primitives'
 import { AddResourceModal } from '@/components/add-resource-modal'
 import { cn } from '@/lib/utils'
 import type { ResourceStatus } from '@/lib/data'
@@ -54,13 +54,11 @@ export default function StyleguidePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Компоненты</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Состояния интерфейса и переиспользуемые элементы.
-        </p>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Компоненты"
+        description="Состояния интерфейса и переиспользуемые элементы."
+      />
 
       <Section title="Кнопки" description="Варианты, размеры и состояния.">
         <div className="flex flex-col gap-4">
@@ -123,7 +121,7 @@ export default function StyleguidePage() {
         </div>
       </Section>
 
-      <Section title="Варианты ответа (radio)" description="Используются в quiz.">
+      <Section title="Варианты ответа (radio)" description="Используются в квизе.">
         <fieldset className="flex flex-col gap-2.5">
           <legend className="sr-only">Пример вопроса</legend>
           {['Первый вариант', 'Второй вариант', 'Третий вариант'].map((opt, i) => {

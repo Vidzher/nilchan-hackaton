@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -74,6 +74,8 @@ export function QuizRunner({
   const [restored, setRestored] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
+  const [checking, setChecking] = useState(false);
+  const checkingRef = useRef(false);
   const [completion, setCompletion] = useState<CompletionResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [completionAttempted, setCompletionAttempted] = useState(false);
@@ -240,27 +242,34 @@ export function QuizRunner({
   const question = quiz.questions[questionIndex];
 
   async function check() {
-    if (selected === null || !question) return;
+    if (selected === null || !question || checkingRef.current) return;
+    checkingRef.current = true;
+    setChecking(true);
     setError(null);
-    const correct = await verify(
-      quiz.id,
-      questionIndex,
-      selected,
-      question.verificationSalt,
-      question.correctAnswerHash,
-    );
-    if (!correct) {
-      setMissed((current) => [...current, questionIndex]);
-      setResult("wrong");
-      return;
-    }
+    try {
+      const correct = await verify(
+        quiz.id,
+        questionIndex,
+        selected,
+        question.verificationSalt,
+        question.correctAnswerHash,
+      );
+      if (!correct) {
+        setMissed((current) => [...current, questionIndex]);
+        setResult("wrong");
+        return;
+      }
 
-    setAnswers((current) =>
-      [...current, { questionIndex, selectedIndex: selected }].sort(
-        (left, right) => left.questionIndex - right.questionIndex,
-      ),
-    );
-    setResult("correct");
+      setAnswers((current) =>
+        [...current, { questionIndex, selectedIndex: selected }].sort(
+          (left, right) => left.questionIndex - right.questionIndex,
+        ),
+      );
+      setResult("correct");
+    } finally {
+      checkingRef.current = false;
+      setChecking(false);
+    }
   }
 
   async function submitCompletion() {
@@ -276,7 +285,7 @@ export function QuizRunner({
       setError(
         caught instanceof ApiError
           ? caught.message
-          : "Не удалось завершить quiz.",
+          : "Не удалось завершить квиз.",
       );
     } finally {
       setSubmitting(false);
@@ -343,7 +352,7 @@ export function QuizRunner({
       <main className="grid min-h-screen place-items-center bg-background px-4">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center">
           <h1 className="text-xl font-semibold">
-            {submitting ? "Завершаем quiz…" : "Все вопросы отвечены"}
+            {submitting ? "Завершаем квиз…" : "Все вопросы отвечены"}
           </h1>
           {error ? (
             <p
@@ -371,7 +380,7 @@ export function QuizRunner({
         <div className="mx-auto flex max-w-2xl items-center gap-4 px-4 py-3">
           <Link
             href="/"
-            aria-label="Выйти из quiz"
+            aria-label="Выйти из квиза"
             className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary"
           >
             <X className="size-4" aria-hidden="true" />
@@ -380,7 +389,7 @@ export function QuizRunner({
             <ProgressBar
               value={answers.length}
               max={total}
-              label="Прогресс quiz"
+              label="Прогресс квиза"
             />
           </div>
           <span className="tabular text-sm font-medium text-muted-foreground">
@@ -506,7 +515,7 @@ export function QuizRunner({
                   {submitting
                     ? "Завершаем…"
                     : position + 1 === queue.length && missed.length === 0
-                      ? "Завершить quiz"
+                      ? "Завершить квиз"
                       : "Продолжить"}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Button>
@@ -514,9 +523,9 @@ export function QuizRunner({
                 <Button
                   className="w-full"
                   onClick={() => void check()}
-                  disabled={selected === null}
+                  disabled={selected === null || checking}
                 >
-                  Проверить ответ
+                  {checking ? "Проверяем…" : "Проверить ответ"}
                 </Button>
               )}
             </div>

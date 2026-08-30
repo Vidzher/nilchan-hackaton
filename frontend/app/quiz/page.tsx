@@ -45,18 +45,18 @@ function QuizContent() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (id === null) { setError('Quiz не найден.'); return }
+    if (id === null) { setError('Квиз не найден.'); return }
     Promise.all([api.resource(id), api.quiz(id)])
       .then(([foundResource, foundQuiz]) => {
-        if (foundResource.status !== 'NOT_COMPLETED') throw new ApiError('Этот quiz недоступен или уже завершён.', 409)
+        if (foundResource.status !== 'NOT_COMPLETED') throw new ApiError('Этот квиз недоступен или уже завершён.', 409)
         setResource(foundResource)
         setQuiz(foundQuiz)
       })
-      .catch((caught) => setError(caught instanceof ApiError ? caught.message : 'Не удалось загрузить quiz.'))
+      .catch((caught) => setError(caught instanceof ApiError ? caught.message : 'Не удалось загрузить квиз.'))
   }, [id])
 
   if (resource && quiz) return <QuizRunner resource={resource} quiz={quiz} />
-  return <main className="grid min-h-screen place-items-center bg-background px-4"><div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center"><h1 className="text-xl font-semibold">{error ?? 'Загружаем quiz…'}</h1>{error ? <Button className="mt-5" nativeButton={false} render={<Link href="/" />}><ArrowLeft className="size-4" aria-hidden="true" />Вернуться в backlog</Button> : null}</div></main>
+  return <main className="grid min-h-screen place-items-center bg-background px-4"><div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center"><h1 className="text-xl font-semibold">{error ?? 'Загружаем квиз…'}</h1>{error ? <Button className="mt-5" nativeButton={false} render={<Link href="/" />}><ArrowLeft className="size-4" aria-hidden="true" />Вернуться в backlog</Button> : null}</div></main>
 }
 
 function QuizRoute() {

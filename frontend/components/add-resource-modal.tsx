@@ -174,7 +174,7 @@ export function AddResourceModal({
         ) : (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <Info className="size-3.5" aria-hidden="true" />
-            После добавления мы автоматически создадим quiz по материалу.
+            После добавления мы автоматически создадим квиз по материалу.
           </p>
         )}
 

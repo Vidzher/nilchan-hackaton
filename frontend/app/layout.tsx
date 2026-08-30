@@ -12,12 +12,11 @@ export const metadata: Metadata = {
   title: 'Learning Backlog',
   description:
     'Learning Backlog помогает дочитывать образовательные статьи, сохранённые на потом.',
-  generator: 'v0.app',
 }
 
 export const viewport: Viewport = {
   colorScheme: 'light',
-  themeColor: '#f7f6f2',
+  themeColor: '#f8f5ef',
   width: 'device-width',
   initialScale: 1,
 }

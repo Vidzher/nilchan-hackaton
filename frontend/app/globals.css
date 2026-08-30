@@ -47,37 +47,37 @@
 :root {
   color-scheme: light;
 
-  --background: #f7f6f2;
-  --foreground: #181816;
+  --background: #f8f5ef;
+  --foreground: #211b17;
 
-  --card: #ffffff;
-  --card-foreground: #181816;
+  --card: #fffdfa;
+  --card-foreground: #211b17;
 
-  --popover: #ffffff;
-  --popover-foreground: #181816;
+  --popover: #fffdfa;
+  --popover-foreground: #211b17;
 
-  --primary: #24241f;
+  --primary: #c44f28;
   --primary-foreground: #ffffff;
 
-  --secondary: #efeee8;
-  --secondary-foreground: #24241f;
+  --secondary: #eee8de;
+  --secondary-foreground: #2d241f;
 
-  --muted: #efeee8;
-  --muted-foreground: #6b6a64;
+  --muted: #eee8de;
+  --muted-foreground: #71685f;
 
-  --accent: #f0efe9;
-  --accent-foreground: #24241f;
+  --accent: #f3e9df;
+  --accent-foreground: #2d241f;
 
   --destructive: #b83a3a;
   --destructive-foreground: #ffffff;
 
-  --border: #dddcd5;
-  --input: #dddcd5;
-  --ring: #e86f3d;
+  --border: #ded7cc;
+  --input: #d8d0c4;
+  --ring: #c44f28;
 
-  --brand: #e86f3d;
+  --brand: #c44f28;
   --brand-foreground: #ffffff;
-  --brand-soft: #f7e9e2;
+  --brand-soft: #f8e2d8;
 
   --success: #287a52;
   --success-soft: #e4efe9;
@@ -87,9 +87,9 @@
 
   --radius: 8px;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #181816;
-  --sidebar-border: #dddcd5;
+  --sidebar: #fcfaf6;
+  --sidebar-foreground: #211b17;
+  --sidebar-border: #ded7cc;
 }
 
 @layer base {
@@ -98,6 +98,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 88% 4%, rgb(196 79 40 / 0.07), transparent 22rem),
+      radial-gradient(circle at 16% 92%, rgb(40 122 82 / 0.05), transparent 26rem);
+    background-attachment: fixed;
   }
   /* Tabular numbers for XP, balances, ranking */
   .tabular {

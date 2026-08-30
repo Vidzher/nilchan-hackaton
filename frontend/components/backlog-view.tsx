@@ -94,7 +94,34 @@ export function BacklogView() {
       </div>
       <div className="flex flex-col gap-3"><div className="flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><label htmlFor="backlog-search" className="sr-only">Поиск по названию</label><input id="backlog-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по названию" className={cn(inputClass, 'pl-9')} /></div><select value={tag} onChange={(event) => setTag(event.target.value)} className={cn(inputClass, 'cursor-pointer sm:w-52')} aria-label="Фильтр по тегу"><option value="ALL">Все теги</option>{allTags.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр по статусу">{filters.map((item) => <button key={item.key} type="button" onClick={() => setFilter(item.key)} aria-pressed={filter === item.key} className={cn('rounded-full border px-3 py-1.5 text-sm font-medium transition-colors', filter === item.key ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:text-foreground')}>{item.label}</button>)}</div></div>
-      {filtered.length ? <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">{filtered.map((resource) => <ResourceCard key={resource.id} resource={resource} onRetry={retry} retrying={retrying === resource.id} />)}</div> : <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center"><Layers className="size-8 text-muted-foreground" aria-hidden="true" /><h2 className="mt-4 text-lg font-semibold">Backlog пуст</h2><Button className="mt-5" onClick={() => setOpen(true)}><Plus className="size-4" aria-hidden="true" />Добавить материал</Button></div>}
+      {filtered.length ? (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {filtered.map((resource) => <ResourceCard key={resource.id} resource={resource} onRetry={retry} retrying={retrying === resource.id} />)}
+        </div>
+      ) : resources.length ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+          <Search className="size-8 text-muted-foreground" aria-hidden="true" />
+          <h2 className="mt-4 text-lg font-semibold">Ничего не найдено</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Попробуйте изменить поиск или фильтры.</p>
+          <Button
+            className="mt-5"
+            variant="outline"
+            onClick={() => {
+              setQuery('')
+              setFilter('ALL')
+              setTag('ALL')
+            }}
+          >
+            Сбросить фильтры
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+          <Layers className="size-8 text-muted-foreground" aria-hidden="true" />
+          <h2 className="mt-4 text-lg font-semibold">Backlog пуст</h2>
+          <Button className="mt-5" onClick={() => setOpen(true)}><Plus className="size-4" aria-hidden="true" />Добавить материал</Button>
+        </div>
+      )}
       <AddResourceModal open={open} onClose={() => setOpen(false)} onCreated={load} slotsUsed={used} slotsTotal={progress?.activeBacklogLimit ?? 0} balance={progress?.ePoints ?? 0} />
     </div>
   )

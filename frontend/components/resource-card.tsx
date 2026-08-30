@@ -89,15 +89,6 @@ export function ResourceCard({ resource, onRetry, retrying }: { resource: Resour
         {status === 'COMPLETED' && completedAt ? 'Завершено' : 'Добавлено'} {new Date(status === 'COMPLETED' && completedAt ? completedAt : createdAt).toLocaleDateString('ru-RU')}
       </p>
 
-      {status === 'PROCESSING' ? (
-        <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-            <div className="h-full w-1/2 animate-pulse rounded-full bg-[color:var(--brand)]" />
-          </div>
-          <span className="shrink-0">Несколько минут</span>
-        </div>
-      ) : null}
-
       {status === 'FAILED' ? <p className="mt-4 text-sm text-muted-foreground">Обработка не удалась. Можно попробовать ещё раз.</p> : null}
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">

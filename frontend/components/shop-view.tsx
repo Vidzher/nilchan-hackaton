@@ -1,40 +1,105 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Coins, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { shopItems, user, type ShopItem } from '@/lib/data'
+import {
+  api,
+  ApiError,
+  type CosmeticsUpdate,
+  type CosmeticType,
+  type Profile,
+  type ShopItem,
+} from '@/lib/api'
 
-type Category = 'Все' | ShopItem['type']
-const categories: Category[] = ['Все', 'Аватар', 'Рамка', 'Титул', 'Витрина']
+type Category = 'Все' | CosmeticType
 
-const emojiTypes: ShopItem['type'][] = ['Аватар', 'Витрина']
+const categories: { value: Category; label: string }[] = [
+  { value: 'Все', label: 'Все' },
+  { value: 'avatar', label: 'Аватары' },
+  { value: 'frame', label: 'Рамки' },
+  { value: 'title', label: 'Титулы' },
+  { value: 'showcase', label: 'Витрина' },
+]
+
+const typeLabels: Record<CosmeticType, string> = {
+  avatar: 'Аватар',
+  frame: 'Рамка',
+  title: 'Титул',
+  showcase: 'Витрина',
+}
+
+function equippedItemID(profile: Profile, type: CosmeticType) {
+  if (type === 'avatar') return profile.cosmetics.avatarId
+  if (type === 'frame') return profile.cosmetics.frameId
+  if (type === 'title') return profile.cosmetics.titleId
+  return profile.cosmetics.showcaseItemId
+}
+
+function equipUpdate(item: ShopItem): CosmeticsUpdate {
+  if (item.type === 'avatar') return { avatarId: item.id }
+  if (item.type === 'frame') return { frameId: item.id }
+  if (item.type === 'title') return { titleId: item.id }
+  return { showcaseItemId: item.id }
+}
 
 export function ShopView() {
-  const [items, setItems] = useState<ShopItem[]>(shopItems)
-  const [balance, setBalance] = useState(user.points)
+  const [items, setItems] = useState<ShopItem[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [category, setCategory] = useState<Category>('Все')
+  const [busyItemID, setBusyItemID] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const visible = items.filter((i) => category === 'Все' || i.type === category)
+  useEffect(() => {
+    Promise.all([api.shop(), api.profile()])
+      .then(([catalog, foundProfile]) => {
+        setItems(catalog)
+        setProfile(foundProfile)
+      })
+      .catch((caught) => {
+        setError(caught instanceof ApiError ? caught.message : 'Не удалось загрузить магазин.')
+      })
+  }, [])
 
-  function buy(item: ShopItem) {
-    if (balance < item.price) return
-    setBalance((b) => b - item.price)
-    setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, state: 'equip' } : i)),
-    )
+  const visible = items.filter((item) => category === 'Все' || item.type === category)
+  const balance = profile?.progress.ePoints ?? 0
+  const owned = new Set(profile?.cosmetics.ownedCosmeticIds ?? [])
+
+  async function buy(item: ShopItem) {
+    setBusyItemID(item.id)
+    setError(null)
+    try {
+      const result = await api.purchaseCosmetic(item.id)
+      setProfile((current) => current && ({
+        ...current,
+        progress: { ...current.progress, ePoints: result.ePoints },
+        cosmetics: {
+          ...current.cosmetics,
+          ownedCosmeticIds: Array.from(new Set([...current.cosmetics.ownedCosmeticIds, result.item.id])),
+        },
+      }))
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Не удалось купить косметику.')
+    } finally {
+      setBusyItemID(null)
+    }
   }
 
-  function equip(item: ShopItem) {
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.type !== item.type) return i
-        if (i.id === item.id) return { ...i, state: 'equipped' }
-        if (i.state === 'equipped') return { ...i, state: 'equip' }
-        return i
-      }),
-    )
+  async function equip(item: ShopItem) {
+    setBusyItemID(item.id)
+    setError(null)
+    try {
+      setProfile(await api.updateCosmetics(equipUpdate(item)))
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Не удалось надеть косметику.')
+    } finally {
+      setBusyItemID(null)
+    }
+  }
+
+  if (!profile) {
+    return <div className="rounded-2xl border border-border bg-card p-6"><h1 className="text-xl font-semibold">{error ?? 'Загружаем магазин…'}</h1></div>
   }
 
   return (
@@ -53,14 +118,16 @@ export function ShopView() {
         </span>
       </div>
 
+      {error ? <p className="rounded-lg bg-warning-soft p-3 text-sm text-[color:var(--destructive)]" role="alert">{error}</p> : null}
+
       <div className="flex flex-wrap gap-2" role="group" aria-label="Категории">
-        {categories.map((c) => {
-          const active = category === c
+        {categories.map((item) => {
+          const active = category === item.value
           return (
             <button
-              key={c}
+              key={item.value}
               type="button"
-              onClick={() => setCategory(c)}
+              onClick={() => setCategory(item.value)}
               aria-pressed={active}
               className={cn(
                 'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
@@ -69,7 +136,7 @@ export function ShopView() {
                   : 'border-border bg-card text-muted-foreground hover:text-foreground',
               )}
             >
-              {c}
+              {item.label}
             </button>
           )
         })}
@@ -77,21 +144,21 @@ export function ShopView() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((item) => {
-          const isEmoji = emojiTypes.includes(item.type)
+          const isOwned = owned.has(item.id)
+          const isEquipped = equippedItemID(profile, item.type) === item.id
           const affordable = balance >= item.price
+          const busy = busyItemID === item.id
           return (
             <div
               key={item.id}
               className={cn(
                 'flex flex-col rounded-xl border bg-card p-4',
-                item.state === 'equipped'
-                  ? 'border-[color:var(--brand)]'
-                  : 'border-border',
+                isEquipped ? 'border-[color:var(--brand)]' : 'border-border',
               )}
             >
               <div className="flex items-start justify-between">
-                <span className="text-xs text-muted-foreground">{item.type}</span>
-                {item.state === 'equipped' ? (
+                <span className="text-xs text-muted-foreground">{typeLabels[item.type]}</span>
+                {isEquipped ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-brand-soft px-1.5 py-0.5 text-xs font-medium text-[color:var(--brand)]">
                     <Check className="size-3" aria-hidden="true" />
                     Надето
@@ -100,51 +167,37 @@ export function ShopView() {
               </div>
 
               <div className="mt-3 grid h-20 place-items-center rounded-lg bg-background">
-                {isEmoji ? (
-                  <span className="text-4xl" aria-hidden="true">
-                    {item.preview}
-                  </span>
+                {item.presentation.emoji ? (
+                  <span className="text-4xl" aria-hidden="true">{item.presentation.emoji}</span>
                 ) : (
-                  <span className="px-2 text-center text-sm font-semibold text-pretty">
-                    {item.preview}
-                  </span>
+                  <span className="px-2 text-center text-sm font-semibold text-pretty">{item.displayName}</span>
                 )}
               </div>
 
-              <p className="mt-3 text-sm font-medium text-pretty">{item.name}</p>
+              <p className="mt-3 text-sm font-medium text-pretty">{item.displayName}</p>
 
               <div className="mt-3">
-                {item.state === 'buy' ? (
+                {!isOwned ? (
                   <Button
                     size="sm"
                     className="w-full"
-                    disabled={!affordable}
-                    onClick={() => buy(item)}
+                    disabled={!affordable || busyItemID !== null}
+                    onClick={() => void buy(item)}
                   >
-                    {affordable ? (
-                      <>
-                        <Coins className="size-3.5" aria-hidden="true" />
-                        {item.price}
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="size-3.5" aria-hidden="true" />
-                        {item.price}
-                      </>
-                    )}
+                    {affordable ? <Coins className="size-3.5" aria-hidden="true" /> : <Lock className="size-3.5" aria-hidden="true" />}
+                    {busy ? 'Покупаем…' : item.price}
                   </Button>
-                ) : item.state === 'equipped' ? (
-                  <Button size="sm" variant="outline" className="w-full" disabled>
-                    Надето
-                  </Button>
+                ) : isEquipped ? (
+                  <Button size="sm" variant="outline" className="w-full" disabled>Надето</Button>
                 ) : (
                   <Button
                     size="sm"
                     variant="secondary"
                     className="w-full"
-                    onClick={() => equip(item)}
+                    disabled={busyItemID !== null}
+                    onClick={() => void equip(item)}
                   >
-                    Надеть
+                    {busy ? 'Надеваем…' : 'Надеть'}
                   </Button>
                 )}
               </div>

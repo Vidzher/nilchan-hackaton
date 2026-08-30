@@ -81,6 +81,43 @@ export type Profile = {
   }
 }
 
+export type CosmeticType = 'avatar' | 'frame' | 'title' | 'showcase'
+
+export type ShopItem = {
+  id: string
+  type: CosmeticType
+  displayName: string
+  price: number
+  presentation: {
+    emoji?: string
+    assetKey?: string
+    cssClass?: string
+  }
+}
+
+export type PurchaseCosmeticResponse = {
+  item: ShopItem
+  ePoints: number
+}
+
+export type CosmeticsUpdate = {
+  avatarId?: string
+  frameId?: string
+  titleId?: string | null
+  showcaseItemId?: string | null
+}
+
+export type LeaderboardEntry = {
+  rank: number
+  userId: number
+  username: string
+  xp: number
+  level: number
+  avatarId: string
+  frameId: string
+  isCurrent: boolean
+}
+
 type SuccessEnvelope<T> = { status: 'OK'; data: T }
 type ErrorEnvelope = { status: 'Error'; error?: string }
 
@@ -158,6 +195,18 @@ export const api = {
       false,
     ),
   profile: () => request<Profile>('/api/profile'),
+  updateCosmetics: (update: CosmeticsUpdate) =>
+    request<Profile>('/api/profile/cosmetics', {
+      method: 'PATCH',
+      body: JSON.stringify(update),
+    }),
+  shop: () => request<ShopItem[]>('/api/shop'),
+  purchaseCosmetic: (itemId: string) =>
+    request<PurchaseCosmeticResponse>('/api/shop/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ itemId }),
+    }),
+  leaderboard: () => request<LeaderboardEntry[]>('/api/leaderboard'),
   resources: () => request<Resource[]>('/api/resources'),
   resource: (id: number) => request<Resource>(`/api/resources/${id}`),
   createResource: (url: string, purchaseOverflowSlot: boolean) =>

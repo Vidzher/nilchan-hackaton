@@ -177,9 +177,7 @@ func (a *App) registerRoutes(
 	leaderboardHandler *leaderboard.Handler,
 ) {
 	a.router.Route("/api", func(r chi.Router) {
-		r.Use(middleware.RequestID)
 		r.Use(middleware.Logger)
-		r.Use(middleware.Recoverer)
 
 		r.Post("/login", authHandler.HandleLogin())
 		r.Post("/register", authHandler.HandleRegister())

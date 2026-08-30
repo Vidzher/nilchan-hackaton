@@ -1,5 +1,14 @@
 package shop
 
+type PurchaseRequest struct {
+	ItemID string `json:"itemId" validate:"required"`
+}
+
+type PurchaseResponse struct {
+	Item    CatalogItemResponse `json:"item"`
+	EPoints int64               `json:"ePoints"`
+}
+
 type CatalogItemResponse struct {
 	ID           string               `json:"id"`
 	Type         string               `json:"type"`

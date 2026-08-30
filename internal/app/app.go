@@ -105,8 +105,9 @@ func New(cfg *config.Config) (*App, error) {
 	profileService := profile.NewService(profileRepo)
 	profileHandler := profile.NewHandler(profileService, validate)
 
-	shopService := shop.NewService()
-	shopHandler := shop.NewHandler(shopService)
+	shopRepo := shop.NewRepository(store)
+	shopService := shop.NewService(shopRepo)
+	shopHandler := shop.NewHandler(shopService, validate)
 
 	a.registerRoutes(authHandler, resourceHandler, quizHandler, profileHandler, shopHandler)
 
@@ -187,6 +188,7 @@ func (a *App) registerRoutes(
 			r.Get("/profile", profileHandler.HandleGet())
 			r.Patch("/profile/cosmetics", profileHandler.HandleUpdateCosmetics())
 			r.Get("/shop", shopHandler.HandleList())
+			r.Post("/shop/purchase", shopHandler.HandlePurchase())
 		})
 	})
 }

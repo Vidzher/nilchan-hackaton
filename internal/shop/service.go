@@ -1,11 +1,26 @@
 package shop
 
-import "nilchan-hackaton/internal/cosmetics"
+import (
+	"context"
 
-type Service struct{}
+	"nilchan-hackaton/internal/cosmetics"
+)
 
-func NewService() *Service {
-	return &Service{}
+type purchaseRepository interface {
+	Purchase(ctx context.Context, userID int64, itemID string, price int64) (int64, error)
+}
+
+type Service struct {
+	repository purchaseRepository
+}
+
+type PurchaseResult struct {
+	Item    cosmetics.Item
+	EPoints int64
+}
+
+func NewService(repository purchaseRepository) *Service {
+	return &Service{repository: repository}
 }
 
 func (s *Service) List() []cosmetics.Item {
@@ -17,4 +32,20 @@ func (s *Service) List() []cosmetics.Item {
 		}
 	}
 	return items
+}
+
+func (s *Service) Purchase(ctx context.Context, userID int64, itemID string) (*PurchaseResult, error) {
+	item, ok := cosmetics.GetByID(itemID)
+	if !ok {
+		return nil, ErrUnknownItem
+	}
+	if item.Free {
+		return nil, ErrItemNotPurchasable
+	}
+
+	balance, err := s.repository.Purchase(ctx, userID, item.ID, item.Price)
+	if err != nil {
+		return nil, err
+	}
+	return &PurchaseResult{Item: item, EPoints: balance}, nil
 }

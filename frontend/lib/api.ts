@@ -95,6 +95,23 @@ export type ShopItem = {
   }
 }
 
+const defaultCosmetics: ShopItem[] = [
+  {
+    id: 'default_avatar',
+    type: 'avatar',
+    displayName: 'Нормис',
+    price: 0,
+    presentation: { emoji: '🙂' },
+  },
+  {
+    id: 'default_frame',
+    type: 'frame',
+    displayName: 'Без рамки',
+    price: 0,
+    presentation: { assetKey: 'frame-default', cssClass: 'frame-default' },
+  },
+]
+
 export type PurchaseCosmeticResponse = {
   item: ShopItem
   ePoints: number
@@ -202,7 +219,7 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(update),
     }),
-  shop: () => request<ShopItem[]>('/api/shop'),
+  shop: async () => [...defaultCosmetics, ...(await request<ShopItem[]>('/api/shop'))],
   purchaseCosmetic: (itemId: string) =>
     request<PurchaseCosmeticResponse>('/api/shop/purchase', {
       method: 'POST',
